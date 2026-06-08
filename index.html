@@ -1,120 +1,132 @@
 <!DOCTYPE html>
-<!-- saved from url=(0059)file:///C:/Users/ahito/Downloads/delivery-tracker-v2_2.html -->
-<html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="配達記録">
 <title>配達記録</title>
-<link rel="stylesheet" href="./配達記録_files/tabler-icons.min.css">
-<script src="./配達記録_files/chart.umd.js.ダウンロード"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
 :root {
-  --bg: #ffffff; --bg2: #f5f5f4; --bg3: #eeede9;
-  --text: #1a1a18; --text2: #6b6b67; --text3: #9a9a96;
-  --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
-  --radius: 8px; --radius-lg: 12px;
-  --uber: #06C167; --demae: #FF6B00; --rocket: #E91E63;
-  --up: #06C167; --down: #E91E63;
+  --bg:#ffffff;--bg2:#f5f5f4;--bg3:#eeede9;
+  --text:#1a1a18;--text2:#6b6b67;--text3:#9a9a96;
+  --border:rgba(0,0,0,0.12);--border2:rgba(0,0,0,0.22);
+  --radius:8px;--radius-lg:12px;
+  --uber:#06C167;--demae:#FF6B00;--rocket:#E91E63;
+  --up:#06C167;--down:#E91E63;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1c1c1a; --bg2: #262624; --bg3: #2e2e2c;
-    --text: #f0efeb; --text2: #9a9a96; --text3: #6b6b67;
-    --border: rgba(255,255,255,0.12); --border2: rgba(255,255,255,0.22);
-  }
+@media(prefers-color-scheme:dark){
+  :root{--bg:#1c1c1a;--bg2:#262624;--bg3:#2e2e2c;--text:#f0efeb;--text2:#9a9a96;--text3:#6b6b67;--border:rgba(255,255,255,0.12);--border2:rgba(255,255,255,0.22);}
 }
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif; font-size: 14px; }
-body { display: flex; flex-direction: column; }
-.topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; border-bottom: 0.5px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 10; }
-.topbar-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
-.sync-status { font-size: 11px; color: var(--text3); }
-.main { flex: 1; overflow-y: auto; padding-bottom: 70px; }
-.page { display: none; padding: 16px; }
-.page.active { display: block; }
-.bottom-nav { display: flex; border-top: 0.5px solid var(--border); background: var(--bg); padding: 6px 0 max(2px, env(safe-area-inset-bottom)); position: fixed; bottom: 0; left: 0; right: 0; }
-.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; cursor: pointer; border: none; background: none; color: var(--text2); font-size: 10px; border-radius: var(--radius); }
-.nav-item.active { color: var(--text); }
-.nav-item i { font-size: 22px; }
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;font-size:14px}
+body{display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:0.5px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
+.topbar-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:6px}
+.sync-status{font-size:11px;color:var(--text3)}
+.main{flex:1;overflow-y:auto;padding-bottom:70px}
+.page{display:none;padding:16px}
+.page.active{display:block}
+.bottom-nav{display:flex;border-top:0.5px solid var(--border);background:var(--bg);padding:6px 0 max(2px,env(safe-area-inset-bottom));position:fixed;bottom:0;left:0;right:0}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;cursor:pointer;border:none;background:none;color:var(--text2);font-size:10px;border-radius:var(--radius)}
+.nav-item.active{color:var(--text)}
+.nav-item i{font-size:22px}
+
+/* 天気予報バナー */
+.weather-forecast{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px;margin-bottom:14px;background:var(--bg2)}
+.forecast-title{font-size:11px;color:var(--text2);margin-bottom:8px;font-weight:600;display:flex;align-items:center;gap:5px}
+.forecast-days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.forecast-day{flex-shrink:0;text-align:center;padding:8px 10px;border-radius:var(--radius);background:var(--bg);border:0.5px solid var(--border);min-width:58px}
+.forecast-day.today{border-color:var(--uber);background:rgba(6,193,103,0.07)}
+.forecast-day .fd-date{font-size:10px;color:var(--text2);margin-bottom:3px}
+.forecast-day .fd-icon{font-size:20px;margin-bottom:3px}
+.forecast-day .fd-temp{font-size:10px;color:var(--text2)}
+.forecast-day .fd-expect{font-size:10px;font-weight:600;margin-top:3px}
+.forecast-day .fd-expect.high{color:var(--uber)}
+.forecast-day .fd-expect.mid{color:#BA7517}
+.forecast-day .fd-expect.low{color:var(--text2)}
 
 /* Entry */
-.date-weather-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-bottom: 14px; }
-.date-input-wrap { display: flex; align-items: flex-end; gap: 4px; }
-.date-btn { background: var(--bg2); border: 0.5px solid var(--border2); color: var(--text); padding: 10px 8px; border-radius: var(--radius); cursor: pointer; font-size: 12px; height: 38px; display: flex; align-items: center; justify-content: center; }
-.date-btn:active { background: var(--bg3); }
-.field { flex: 1; display: flex; flex-direction: column; }
-.field label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 4px; }
-.field input, .field select { width: 100%; padding: 10px 12px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 14px; -webkit-appearance: none; appearance: none; height: 38px; }
-.plat-block { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px; margin-bottom: 10px; }
-.plat-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; font-weight: 600; }
-.plat-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.plat-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.plat-inputs label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 3px; }
-.plat-inputs input { width: 100%; padding: 9px 10px; border-radius: var(--radius); border: 0.5px solid var(--border); background: var(--bg2); color: var(--text); font-size: 14px; }
-.save-btn { width: 100%; padding: 14px; border-radius: var(--radius-lg); background: var(--text); color: var(--bg); border: none; cursor: pointer; font-size: 15px; font-weight: 600; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.save-btn:active { opacity: .8; }
-/* 既存データ読み込み中のインジケーター */
-.entry-hint { font-size: 11px; color: var(--text2); text-align: center; padding: 4px 0 10px; display: none; }
-.entry-hint.show { display: block; }
-.entry-hint.loaded { color: var(--uber); }
+.date-weather-row{display:grid;grid-template-columns:1.4fr 1fr;gap:10px;margin-bottom:14px}
+.date-input-wrap{display:flex;align-items:flex-end;gap:4px}
+.date-btn{background:var(--bg2);border:0.5px solid var(--border2);color:var(--text);padding:10px 8px;border-radius:var(--radius);cursor:pointer;font-size:12px;height:38px;display:flex;align-items:center;justify-content:center;gap:2px;white-space:nowrap}
+.date-btn:active{background:var(--bg3)}
+.field{flex:1;display:flex;flex-direction:column}
+.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:4px}
+.field input,.field select{width:100%;padding:10px 12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);font-size:14px;-webkit-appearance:none;appearance:none;height:38px}
+.plat-block{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px;margin-bottom:10px}
+.plat-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;font-weight:600}
+.plat-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.plat-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.plat-inputs label{font-size:11px;color:var(--text2);display:block;margin-bottom:3px}
+.plat-inputs input{width:100%;padding:9px 10px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px}
+.save-btn{width:100%;padding:14px;border-radius:var(--radius-lg);background:var(--text);color:var(--bg);border:none;cursor:pointer;font-size:15px;font-weight:600;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px}
+.save-btn:active{opacity:.8}
+.entry-hint{font-size:11px;color:var(--text2);text-align:center;padding:4px 0 10px;display:none}
+.entry-hint.show{display:block}
+.entry-hint.loaded{color:var(--uber)}
 
 /* Summary */
-.section-title { font-size: 11px; font-weight: 600; color: var(--text2); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: .5px; }
-.month-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.month-bar button { background: none; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 7px 14px; cursor: pointer; color: var(--text); font-size: 13px; }
-.month-bar span { font-size: 15px; font-weight: 600; }
-.stat2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.stat-card { background: var(--bg2); border-radius: var(--radius); padding: 12px; position: relative; overflow: hidden; }
-.stat-card .slabel { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
-.stat-card .sval { font-size: 18px; font-weight: 600; }
-.stat-card .sdiff { font-size: 11px; margin-top: 3px; display: flex; flex-direction: column; gap: 1px; }
-.stat-card-full { grid-column: span 2; background: var(--bg3); border: 0.5px solid var(--border); }
-.expense-input-box { display: flex; align-items: center; gap: 10px; background: var(--bg); padding: 6px 12px; border-radius: var(--radius); margin-top: 6px; border: 0.5px solid var(--border2); }
-.expense-input-box input { border: none; background: transparent; color: var(--text); font-size: 15px; font-weight: 600; width: 100%; outline: none; }
-.up { color: var(--up); } .down { color: var(--down); } .neu { color: var(--text2); }
-.year-banner { background: var(--bg2); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
-.year-banner .yl { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
-.year-banner .yv { font-size: 22px; font-weight: 600; }
-.plat-row { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.bar-wrap { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin: -2px 0 6px; }
-.bar-fill { height: 100%; border-radius: 3px; }
-.weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.weather-card { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
-.weather-card .wicon { font-size: 20px; margin-bottom: 3px; }
-.weather-card .wname { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
-.weather-card .wval { font-size: 15px; font-weight: 600; }
-.weather-card .wsub { font-size: 11px; color: var(--text2); margin-top: 2px; }
-.rank-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-.rank-item { display: flex; align-items: center; gap: 10px; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
-.rank-num { font-size: 15px; font-weight: 700; min-width: 22px; color: var(--text2); }
-.rank-num.gold { color: #BA7517; } .rank-num.silver { color: #888780; } .rank-num.bronze { color: #993C1D; }
-.rank-info { flex: 1; }
-.rank-date { font-size: 13px; font-weight: 600; }
-.rank-detail { font-size: 11px; color: var(--text2); margin-top: 2px; }
-.rank-amt { font-size: 15px; font-weight: 700; color: var(--uber); }
-.chart-section { margin-bottom: 14px; }
-.chart-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
-.chart-legend { display: flex; gap: 12px; margin-bottom: 8px; font-size: 11px; color: var(--text2); flex-wrap: wrap; }
-.chart-legend span { display: flex; align-items: center; gap: 4px; }
-.chart-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
-
-
-.empty { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 13px; }
-.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; z-index: 100; }
-.toast.show { opacity: 1; }
+.section-title{font-size:11px;font-weight:600;color:var(--text2);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.5px}
+.month-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.month-bar button{background:none;border:0.5px solid var(--border2);border-radius:var(--radius);padding:7px 14px;cursor:pointer;color:var(--text);font-size:13px}
+.month-bar span{font-size:15px;font-weight:600}
+.stat2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat-card{background:var(--bg2);border-radius:var(--radius);padding:12px;position:relative;overflow:hidden}
+.stat-card .slabel{font-size:11px;color:var(--text2);margin-bottom:4px}
+.stat-card .sval{font-size:18px;font-weight:600}
+.stat-card .sdiff{font-size:11px;margin-top:3px;display:flex;flex-direction:column;gap:1px}
+.stat-card-full{grid-column:span 2;background:var(--bg3);border:0.5px solid var(--border)}
+.expense-input-box{display:flex;align-items:center;gap:10px;background:var(--bg);padding:6px 12px;border-radius:var(--radius);margin-top:6px;border:0.5px solid var(--border2)}
+.expense-input-box input{border:none;background:transparent;color:var(--text);font-size:15px;font-weight:600;width:100%;outline:none}
+.up{color:var(--up)}.down{color:var(--down)}.neu{color:var(--text2)}
+.year-banner{background:var(--bg2);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.year-banner .yl{font-size:11px;color:var(--text2);margin-bottom:2px}
+.year-banner .yv{font-size:22px;font-weight:600}
+.plat-row{border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.bar-wrap{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin:-2px 0 6px}
+.bar-fill{height:100%;border-radius:3px}
+.weather-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.weather-card{border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px}
+.weather-card .wicon{font-size:20px;margin-bottom:3px}
+.weather-card .wname{font-size:11px;color:var(--text2);margin-bottom:2px}
+.weather-card .wval{font-size:15px;font-weight:600}
+.weather-card .wsub{font-size:11px;color:var(--text2);margin-top:2px}
+.rank-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.rank-item{display:flex;align-items:center;gap:10px;border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px}
+.rank-num{font-size:15px;font-weight:700;min-width:22px;color:var(--text2)}
+.rank-num.gold{color:#BA7517}.rank-num.silver{color:#888780}.rank-num.bronze{color:#993C1D}
+.rank-info{flex:1}
+.rank-date{font-size:13px;font-weight:600}
+.rank-detail{font-size:11px;color:var(--text2);margin-top:2px}
+.rank-amt{font-size:15px;font-weight:700;color:var(--uber)}
+.chart-legend{display:flex;gap:12px;margin-bottom:8px;font-size:11px;color:var(--text2);flex-wrap:wrap}
+.chart-legend span{display:flex;align-items:center;gap:4px}
+.chart-legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+.empty{text-align:center;padding:3rem 1rem;color:var(--text2);font-size:13px}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:100}
+.toast.show{opacity:1}
 </style>
 </head>
 <body>
 
 <div class="topbar">
   <span class="topbar-title"><i class="ti ti-motorbike"></i> 配達記録</span>
-  <span class="sync-status" id="sync-status">同期完了 ✓</span>
+  <span class="sync-status" id="sync-status">接続中...</span>
 </div>
 
 <div class="main">
+  <!-- 入力ページ -->
   <div id="page-entry" class="page active">
+    <!-- 天気予報バナー -->
+    <div class="weather-forecast">
+      <div class="forecast-title"><i class="ti ti-map-pin"></i>仙台市 7日間の天気予報と売上期待値</div>
+      <div class="forecast-days" id="forecast-days"><div style="font-size:12px;color:var(--text2);padding:8px 0">天気予報を取得中...</div></div>
+    </div>
+
     <div class="date-weather-row">
       <div class="date-input-wrap">
         <button class="date-btn" id="btn-prev-day"><i class="ti ti-chevron-left"></i>前日</button>
@@ -131,7 +143,7 @@ body { display: flex; flex-direction: column; }
         </select>
       </div>
     </div>
-    <div class="entry-hint show loaded" id="entry-hint">✓ 保存済みのデータを読み込みました（上書き保存できます）</div>
+    <div class="entry-hint" id="entry-hint"></div>
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
       <div class="plat-inputs">
@@ -156,6 +168,7 @@ body { display: flex; flex-direction: column; }
     <button class="save-btn" id="btn-save"><i class="ti ti-device-floppy"></i> 保存する</button>
   </div>
 
+  <!-- 分析ページ -->
   <div id="page-summary" class="page">
     <div class="month-bar">
       <button id="btn-prev-month"><i class="ti ti-chevron-left"></i></button>
@@ -164,8 +177,6 @@ body { display: flex; flex-direction: column; }
     </div>
     <div id="summary-content"></div>
   </div>
-
-
 </div>
 
 <div class="bottom-nav">
@@ -185,8 +196,7 @@ const firebaseConfig = {
   projectId: "delivery-2cac6",
   storageBucket: "delivery-2cac6.firebasestorage.app",
   messagingSenderId: "441822108642",
-  appId: "1:441822108642:web:1f28eb42e2c99d5bd777bb",
-  measurementId: "G-6NYFC1MTEG"
+  appId: "1:441822108642:web:1f28eb42e2c99d5bd777bb"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -195,31 +205,111 @@ const db = getFirestore(app);
 let records = [];
 let expenses = {};
 let monthOffset = 0;
-let chart1, chart2;
-const wmap = { sunny:'☀️ 晴れ', cloudy:'⛅ 曇り', rainy:'🌧️ 雨', 'heavy-rain':'⛈️ 大雨', snowy:'❄️ 雪' };
+// グラフインスタンスをページ外で保持（innerHTML再生成後に確実にdestroyできるよう）
+let chartInstances = {};
+
+const wmap  = { sunny:'☀️ 晴れ', cloudy:'⛅ 曇り', rainy:'🌧️ 雨', 'heavy-rain':'⛈️ 大雨', snowy:'❄️ 雪' };
 const wmapS = { sunny:'☀️', cloudy:'⛅', rainy:'🌧️', 'heavy-rain':'⛈️', snowy:'❄️' };
 const inputIds = ['uber-s','uber-c','demae-s','demae-c','rocket-s','rocket-c'];
 
-function totalOf(r) { return r.uber.sales + r.demae.sales + r.rocket.sales; }
-function countOf(r) { return r.uber.count + r.demae.count + r.rocket.count; }
+// ── ユーティリティ ──────────────────────────
+function totalOf(r){ return r.uber.sales + r.demae.sales + r.rocket.sales; }
+function countOf(r){ return r.uber.count + r.demae.count + r.rocket.count; }
 
-// ★ 日付に対応するデータを入力欄に反映する
-function loadEntryForDate(date) {
+function todayStr(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── グラフ描画（canvasが既にDOMにある前提で呼ぶ） ──
+function drawChart(id, type, data, options){
+  if(chartInstances[id]){ chartInstances[id].destroy(); delete chartInstances[id]; }
+  const el = document.getElementById(id);
+  if(!el) return;
+  chartInstances[id] = new Chart(el, { type, data, options });
+}
+
+// ── 天気予報（Open-Meteo、仙台: 38.27N 140.87E） ──────
+const WMO_MAP = {
+  0:'sunny', 1:'sunny', 2:'cloudy', 3:'cloudy',
+  45:'cloudy', 48:'cloudy',
+  51:'rainy', 53:'rainy', 55:'rainy',
+  61:'rainy', 63:'rainy', 65:'heavy-rain',
+  71:'snowy', 73:'snowy', 75:'snowy', 77:'snowy',
+  80:'rainy', 81:'rainy', 82:'heavy-rain',
+  85:'snowy', 86:'snowy',
+  95:'heavy-rain', 96:'heavy-rain', 99:'heavy-rain'
+};
+
+async function fetchForecast(){
+  try {
+    const url = 'https://api.open-meteo.com/v1/forecast?latitude=38.2688&longitude=140.8721&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=7';
+    const res = await fetch(url);
+    const json = await res.json();
+    renderForecast(json.daily);
+  } catch(e){
+    document.getElementById('forecast-days').innerHTML = '<div style="font-size:12px;color:var(--text2);padding:4px 0">天気予報の取得に失敗しました</div>';
+  }
+}
+
+function calcExpectedSales(weatherKey){
+  // 過去データから天気別平均日売上を計算、なければ目安値
+  const hits = records.filter(r => (r.weather||'sunny') === weatherKey && totalOf(r) > 0);
+  if(hits.length >= 2) return Math.round(hits.reduce((s,r) => s+totalOf(r), 0) / hits.length);
+  // データ不足時はパターン別目安（比率）
+  const base = (() => {
+    const all = records.filter(r => totalOf(r) > 0);
+    if(all.length === 0) return null;
+    return Math.round(all.reduce((s,r) => s+totalOf(r), 0) / all.length);
+  })();
+  if(!base) return null;
+  const ratio = { sunny:0.9, cloudy:1.0, rainy:1.2, 'heavy-rain':1.35, snowy:1.1 };
+  return Math.round(base * (ratio[weatherKey] || 1.0));
+}
+
+function renderForecast(daily){
+  const today = todayStr();
+  const days = daily.time.map((date, i) => ({
+    date,
+    wcode: daily.weathercode[i],
+    tmax: Math.round(daily.temperature_2m_max[i]),
+    tmin: Math.round(daily.temperature_2m_min[i]),
+  }));
+
+  const html = days.map(d => {
+    const wkey = WMO_MAP[d.wcode] || 'cloudy';
+    const icon = wmapS[wkey] || '⛅';
+    const exp  = calcExpectedSales(wkey);
+    const expStr  = exp ? `¥${Math.round(exp/100)*100 >= 10000 ? (exp/10000).toFixed(1)+'万' : exp.toLocaleString()}` : '--';
+    const expClass = !exp ? 'low' : exp >= 15000 ? 'high' : exp >= 10000 ? 'mid' : 'low';
+    const mm  = d.date.slice(5);  // MM-DD
+    const dow = ['日','月','火','水','木','金','土'][new Date(d.date+'T00:00:00').getDay()];
+    const isToday = d.date === today;
+    return `<div class="forecast-day${isToday?' today':''}">
+      <div class="fd-date">${mm.replace('-','/')}(${dow})</div>
+      <div class="fd-icon">${icon}</div>
+      <div class="fd-temp">${d.tmin}°/${d.tmax}°</div>
+      <div class="fd-expect ${expClass}">${expStr}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('forecast-days').innerHTML = html;
+}
+
+// ── 入力欄の日付連動 ──────────────────────────
+function loadEntryForDate(date){
   const hint = document.getElementById('entry-hint');
   const existing = records.find(r => r.date === date);
-  if (existing) {
-    // 既存データあり → 入力欄に読み込む
-    document.getElementById('uber-s').value = existing.uber.sales || '';
-    document.getElementById('uber-c').value = existing.uber.count || '';
+  if(existing){
+    document.getElementById('uber-s').value  = existing.uber.sales  || '';
+    document.getElementById('uber-c').value  = existing.uber.count  || '';
     document.getElementById('demae-s').value = existing.demae.sales || '';
     document.getElementById('demae-c').value = existing.demae.count || '';
-    document.getElementById('rocket-s').value = existing.rocket.sales || '';
-    document.getElementById('rocket-c').value = existing.rocket.count || '';
+    document.getElementById('rocket-s').value= existing.rocket.sales|| '';
+    document.getElementById('rocket-c').value= existing.rocket.count|| '';
     document.getElementById('inp-weather').value = existing.weather || 'sunny';
     hint.textContent = '✓ 保存済みのデータを読み込みました（上書き保存できます）';
     hint.className = 'entry-hint show loaded';
   } else {
-    // データなし → 入力欄をクリア
     inputIds.forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('inp-weather').value = 'sunny';
     hint.textContent = '';
@@ -227,170 +317,151 @@ function loadEntryForDate(date) {
   }
 }
 
-function listenToDatabase() {
-  const colRef = collection(db, "delivery_records");
-  onSnapshot(colRef, (snapshot) => {
+// ── Firebase ──────────────────────────────────
+function listenToDatabase(){
+  onSnapshot(collection(db, "delivery_records"), snapshot => {
     records = [];
-    snapshot.forEach((doc) => {
-      records.push({ date: doc.id, ...doc.data() });
-    });
+    snapshot.forEach(d => records.push({ date: d.id, ...d.data() }));
     records.sort((a,b) => a.date.localeCompare(b.date));
-    // Firebaseからデータが届いたら、現在表示中の日付で入力欄を再同期
-    const currentDate = document.getElementById('inp-date').value;
-    if (currentDate) loadEntryForDate(currentDate);
+    const cur = document.getElementById('inp-date').value;
+    if(cur) loadEntryForDate(cur);
+    // 天気予報の期待値も再計算
+    fetchForecast();
     updateViews();
-    document.getElementById('sync-status').textContent = "同期完了 ✓";
-  }, (error) => {
-    console.error("Firebaseの読み込みエラー:", error);
-    document.getElementById('sync-status').textContent = "同期エラー";
-  });
+    document.getElementById('sync-status').textContent = '同期完了 ✓';
+  }, () => { document.getElementById('sync-status').textContent = '同期エラー'; });
 
-  const expRef = collection(db, "monthly_expenses");
-  onSnapshot(expRef, (snapshot) => {
+  onSnapshot(collection(db, "monthly_expenses"), snapshot => {
     expenses = {};
-    snapshot.forEach((doc) => {
-      expenses[doc.id] = doc.data().amount || 0;
-    });
+    snapshot.forEach(d => { expenses[d.id] = d.data().amount || 0; });
     const expInput = document.getElementById('inp-expense');
-    if (document.activeElement !== expInput) {
-      updateViews();
-    }
+    if(document.activeElement !== expInput) updateViews();
   });
 }
 
-function updateViews() {
-  if (document.getElementById('page-summary').classList.contains('active')) renderSummary();
+function updateViews(){
+  if(document.getElementById('page-summary').classList.contains('active')) renderSummary();
 }
 
-function showPage(p) {
+// ── ページ切替 ────────────────────────────────
+function showPage(p){
   ['entry','summary'].forEach(n => {
     document.getElementById('page-'+n).classList.toggle('active', n===p);
     document.getElementById('nav-'+n).classList.toggle('active', n===p);
   });
-  if (p === 'summary') renderSummary();
+  if(p === 'summary') renderSummary();
 }
 
-function getMonth() {
+// ── 月ナビ ────────────────────────────────────
+function getMonth(){
   const d = new Date(); d.setMonth(d.getMonth() + monthOffset);
-  return d.toISOString().slice(0,7);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
-function changeMonth(d) { monthOffset += d; renderSummary(); }
+function changeMonth(delta){ monthOffset += delta; renderSummary(); }
 
-function changeDay(offset) {
-  const dateInput = document.getElementById('inp-date');
-  if (!dateInput.value) return;
-  const [y, m, d] = dateInput.value.split('-').map(Number);
-  const current = new Date(y, m - 1, d + offset);
-  const newDate = `${current.getFullYear()}-${String(current.getMonth()+1).padStart(2,'0')}-${String(current.getDate()).padStart(2,'0')}`;
-  dateInput.value = newDate;
-  loadEntryForDate(newDate);
-}
-
-async function saveExpense(month, amount) {
-  try {
-    await setDoc(doc(db, "monthly_expenses", month), { amount: Number(amount) || 0 });
-  } catch (e) {
-    console.error("出費の保存失敗:", e);
-  }
+// ── 前日・翌日 ────────────────────────────────
+function changeDay(offset){
+  const inp = document.getElementById('inp-date');
+  if(!inp.value) return;
+  const [y,m,d] = inp.value.split('-').map(Number);
+  const nd = new Date(y, m-1, d+offset);
+  inp.value = `${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
+  loadEntryForDate(inp.value);
 }
 
-async function saveRecord() {
+// ── 保存 ──────────────────────────────────────
+async function saveRecord(){
   const date = document.getElementById('inp-date').value;
-  if (!date) { showToast('日付を入力してください'); return; }
+  if(!date){ showToast('日付を入力してください'); return; }
   const rec = {
     weather: document.getElementById('inp-weather').value,
-    uber: { sales: +document.getElementById('uber-s').value||0, count: +document.getElementById('uber-c').value||0 },
+    uber:  { sales: +document.getElementById('uber-s').value||0,  count: +document.getElementById('uber-c').value||0  },
     demae: { sales: +document.getElementById('demae-s').value||0, count: +document.getElementById('demae-c').value||0 },
-    rocket: { sales: +document.getElementById('rocket-s').value||0, count: +document.getElementById('rocket-c').value||0 }
+    rocket:{ sales: +document.getElementById('rocket-s').value||0,count: +document.getElementById('rocket-c').value||0 }
   };
   try {
-    document.getElementById('sync-status').textContent = "保存中...";
+    document.getElementById('sync-status').textContent = '保存中...';
     await setDoc(doc(db, "delivery_records", date), rec);
-    showToast('クラウドに保存しました ✓');
-    // 保存後はヒントを「保存済み」に更新
+    showToast('保存しました ✓');
     const hint = document.getElementById('entry-hint');
     hint.textContent = '✓ 保存済みのデータを読み込みました（上書き保存できます）';
     hint.className = 'entry-hint show loaded';
-  } catch (e) {
-    console.error(e);
-    showToast('保存に失敗しました');
+  } catch(e){ showToast('保存に失敗しました'); }
+}
+
+async function deleteRecord(date){
+  if(confirm(`${date}の記録を削除しますか？`)){
+    try { await deleteDoc(doc(db, "delivery_records", date)); showToast('削除しました'); }
+    catch(e){ showToast('削除に失敗しました'); }
   }
 }
 
-async function deleteRecord(date) {
-  if (confirm(`${date}の記録を削除しますか？`)) {
-    try {
-      await deleteDoc(doc(db, "delivery_records", date));
-      showToast('削除しました');
-    } catch(e) {
-      showToast('削除に失敗しました');
-    }
-  }
+async function saveExpense(month, amount){
+  try { await setDoc(doc(db, "monthly_expenses", month), { amount: Number(amount)||0 }); }
+  catch(e){}
 }
 
-function diffHtml(cur, prev, label = "前月比") {
-  if (!prev || prev === 0) return `<div class="sdiff neu">--% ${label}</div>`;
-  const pct = Math.round((cur - prev) / prev * 100);
-  if (pct > 0) return `<div class="sdiff up">▲ ${pct}% ${label}</div>`;
-  if (pct < 0) return `<div class="sdiff down">▼ ${Math.abs(pct)}% ${label}</div>`;
+// ── 分析ページ描画 ────────────────────────────
+function diffHtml(cur, prev, label){
+  if(!prev) return `<div class="sdiff neu">--% ${label}</div>`;
+  const pct = Math.round((cur-prev)/prev*100);
+  if(pct>0)  return `<div class="sdiff up">▲ ${pct}% ${label}</div>`;
+  if(pct<0)  return `<div class="sdiff down">▼ ${Math.abs(pct)}% ${label}</div>`;
   return `<div class="sdiff neu">→ 0% ${label}</div>`;
 }
 
-function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); }
-
-function renderSummary() {
+function renderSummary(){
   const month = getMonth();
-  document.getElementById('month-label').textContent = month.replace('-','年') + '月';
-  const f = records.filter(r => r.date.startsWith(month));
-  const [y, m] = month.split('-').map(Number);
-  const prevM = m===1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
-  const lastYearM = `${y-1}-${String(m).padStart(2,'0')}`;
-  const pf = records.filter(r => r.date.startsWith(prevM));
-  const lyf = records.filter(r => r.date.startsWith(lastYearM));
-  const year = month.slice(0,4);
-  const yf = records.filter(r => r.date.startsWith(year));
+  document.getElementById('month-label').textContent = month.replace('-','年')+'月';
 
-  const curS = f.reduce((s,r) => s+totalOf(r), 0);
-  const curC = f.reduce((s,r) => s+countOf(r), 0);
-  const prevS = pf.reduce((s,r) => s+totalOf(r), 0);
-  const prevC = pf.reduce((s,r) => s+countOf(r), 0);
-  const lyS = lyf.reduce((s,r) => s+totalOf(r), 0);
-  const lyC = lyf.reduce((s,r) => s+countOf(r), 0);
-  const yearS = yf.reduce((s,r) => s+totalOf(r), 0);
-  const yearC = yf.reduce((s,r) => s+countOf(r), 0);
+  const f   = records.filter(r => r.date.startsWith(month));
+  const [y,m] = month.split('-').map(Number);
+  const prevM   = m===1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
+  const lastYrM = `${y-1}-${String(m).padStart(2,'0')}`;
+  const pf  = records.filter(r => r.date.startsWith(prevM));
+  const lyf = records.filter(r => r.date.startsWith(lastYrM));
+  const yf  = records.filter(r => r.date.startsWith(String(y)));
 
-  const activeDays = f.filter(r => totalOf(r) > 0);
-  const avgDaySales = activeDays.length > 0 ? Math.round(curS / activeDays.length) : 0;
-  const totalActCount = activeDays.reduce((s,r) => s+countOf(r), 0);
-  const avgActCount = activeDays.length > 0 ? Math.round(totalActCount / activeDays.length * 10) / 10 : 0;
-  const avgUnit = curC > 0 ? Math.round(curS / curC) : 0;
+  const curS  = f.reduce((s,r)=>s+totalOf(r),0);
+  const curC  = f.reduce((s,r)=>s+countOf(r),0);
+  const prevS = pf.reduce((s,r)=>s+totalOf(r),0);
+  const prevC = pf.reduce((s,r)=>s+countOf(r),0);
+  const lyS   = lyf.reduce((s,r)=>s+totalOf(r),0);
+  const lyC   = lyf.reduce((s,r)=>s+countOf(r),0);
+  const yearS = yf.reduce((s,r)=>s+totalOf(r),0);
+  const yearC = yf.reduce((s,r)=>s+countOf(r),0);
 
-  const totalDaysInMonth = daysInMonth(y, m);
-  const today = new Date();
-  let passedDays = totalDaysInMonth;
-  if (today.toISOString().slice(0,7) === month) passedDays = today.getDate();
-  const dailyAverage = curS / (passedDays || 1);
-  const estimatedPayout = Math.round(dailyAverage * totalDaysInMonth);
-  const currentExpense = expenses[month] || 0;
-  const netProfit = curS - currentExpense;
+  const activeDays = f.filter(r=>totalOf(r)>0);
+  const avgDaySales= activeDays.length>0 ? Math.round(curS/activeDays.length) : 0;
+  const actCount   = activeDays.reduce((s,r)=>s+countOf(r),0);
+  const avgActCount= activeDays.length>0 ? Math.round(actCount/activeDays.length*10)/10 : 0;
+  const avgUnit    = curC>0 ? Math.round(curS/curC) : 0;
 
-  const weatherStats = {};
-  f.forEach(r => {
-    const w = r.weather || 'sunny';
-    if (!weatherStats[w]) weatherStats[w] = { sales:0, count:0, days:0 };
-    weatherStats[w].sales += totalOf(r);
-    weatherStats[w].count += countOf(r);
-    if (totalOf(r) > 0) weatherStats[w].days++;
+  const totalDays = new Date(y,m,0).getDate();
+  const today2    = new Date();
+  const passedDays= today2.toISOString().slice(0,7)===month ? today2.getDate() : totalDays;
+  const dailyAvg  = curS/(passedDays||1);
+  const estPayout = Math.round(dailyAvg*totalDays);
+  const curExp    = expenses[month]||0;
+  const netProfit = curS - curExp;
+
+  // 天気別
+  const wStats={};
+  f.forEach(r=>{
+    const w=r.weather||'sunny';
+    if(!wStats[w]) wStats[w]={sales:0,count:0,days:0};
+    wStats[w].sales+=totalOf(r); wStats[w].count+=countOf(r);
+    if(totalOf(r)>0) wStats[w].days++;
   });
 
-  const top5 = [...f].sort((a,b) => totalOf(b)-totalOf(a)).slice(0,5);
-  const plats = [{k:'uber',n:'Uber Eats',c:'#06C167'},{k:'demae',n:'出前館',c:'#FF6B00'},{k:'rocket',n:'Rocket Now',c:'#E91E63'}];
+  const top5=[...f].sort((a,b)=>totalOf(b)-totalOf(a)).slice(0,5);
+  const plats=[{k:'uber',n:'Uber Eats',c:'#06C167'},{k:'demae',n:'出前館',c:'#FF6B00'},{k:'rocket',n:'Rocket Now',c:'#E91E63'}];
 
-  const platRows = plats.map(p => {
-    const s = f.reduce((a,r) => a+r[p.k].sales, 0);
-    const c = f.reduce((a,r) => a+r[p.k].count, 0);
-    const u = c > 0 ? Math.round(s/c) : 0;
-    const pct = curS > 0 ? Math.round(s/curS*100) : 0;
+  const platRows=plats.map(p=>{
+    const s=f.reduce((a,r)=>a+r[p.k].sales,0);
+    const c=f.reduce((a,r)=>a+r[p.k].count,0);
+    const u=c>0?Math.round(s/c):0;
+    const pct=curS>0?Math.round(s/curS*100):0;
     return `<div class="plat-row">
       <div style="display:flex;align-items:center;gap:8px">
         <div class="plat-dot" style="background:${p.c}"></div>
@@ -403,11 +474,10 @@ function renderSummary() {
     <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${p.c}"></div></div>`;
   }).join('');
 
-  const weatherOrder = ['sunny','cloudy','rainy','heavy-rain','snowy'];
-  const weatherCards = weatherOrder.filter(w => weatherStats[w]).map(w => {
-    const ws = weatherStats[w];
-    const avgS = ws.days > 0 ? Math.round(ws.sales/ws.days) : 0;
-    const avgC = ws.days > 0 ? Math.round(ws.count/ws.days*10)/10 : 0;
+  const wCards=['sunny','cloudy','rainy','heavy-rain','snowy'].filter(w=>wStats[w]).map(w=>{
+    const ws=wStats[w];
+    const avgS=ws.days>0?Math.round(ws.sales/ws.days):0;
+    const avgC=ws.days>0?Math.round(ws.count/ws.days*10)/10:0;
     return `<div class="weather-card">
       <div class="wicon">${wmapS[w]}</div>
       <div class="wname">${wmap[w].split(' ')[1]}</div>
@@ -416,135 +486,138 @@ function renderSummary() {
     </div>`;
   }).join('');
 
-  const rankColors = ['gold','silver','bronze','',''];
-  const rankItems = top5.map((r,i) => {
-    const t = totalOf(r); const c = countOf(r); const u = c>0 ? Math.round(t/c) : 0;
-    const parts = [];
-    if (r.uber.sales>0) parts.push(`U:¥${r.uber.sales.toLocaleString()}`);
-    if (r.demae.sales>0) parts.push(`出:¥${r.demae.sales.toLocaleString()}`);
-    if (r.rocket.sales>0) parts.push(`R:¥${r.rocket.sales.toLocaleString()}`);
+  const rc=['gold','silver','bronze','',''];
+  const rankItems=top5.map((r,i)=>{
+    const t=totalOf(r),c=countOf(r),u=c>0?Math.round(t/c):0;
+    const pts=[];
+    if(r.uber.sales>0)  pts.push(`U:¥${r.uber.sales.toLocaleString()}`);
+    if(r.demae.sales>0) pts.push(`出:¥${r.demae.sales.toLocaleString()}`);
+    if(r.rocket.sales>0)pts.push(`R:¥${r.rocket.sales.toLocaleString()}`);
     return `<div class="rank-item">
-      <div class="rank-num ${rankColors[i]}">${i+1}</div>
+      <div class="rank-num ${rc[i]}">${i+1}</div>
       <div class="rank-info">
         <div class="rank-date">${r.date.slice(5).replace('-','/')} ${wmapS[r.weather]||'☀️'}</div>
-        <div class="rank-detail">${c}件 / 単価¥${u.toLocaleString()} / ${parts.join(' ')}</div>
+        <div class="rank-detail">${c}件 / 単価¥${u.toLocaleString()} / ${pts.join(' ')}</div>
       </div>
       <div class="rank-amt">¥${t.toLocaleString()}</div>
     </div>`;
   }).join('');
 
-  const labels = f.map(r => r.date.slice(8)+'日');
+  const labels=f.map(r=>r.date.slice(8)+'日');
+
+  // ★ グラフcanvasはHTML側に固定で置き、innerHTML更新の対象外にする
   document.getElementById('summary-content').innerHTML = `
     <div class="section-title">収支管理・プラスマイナス</div>
-    <div class="stat2" style="margin-bottom: 16px;">
+    <div class="stat2" style="margin-bottom:16px">
       <div class="stat-card stat-card-full">
         <div class="slabel">今月の出費（経費入力）</div>
-        <div class="expense-input-box">
-          <span>¥</span>
-          <input type="number" id="inp-expense" value="${currentExpense === 0 ? '' : currentExpense}" placeholder="0" inputmode="numeric">
+        <div class="expense-input-box"><span>¥</span>
+          <input type="number" id="inp-expense" value="${curExp||''}" placeholder="0" inputmode="numeric">
         </div>
       </div>
-      <div class="stat-card" style="background: ${netProfit >= 0 ? 'rgba(6,193,103,0.1)' : 'rgba(233,30,99,0.1)'};">
-        <div class="slabel">純利益 (プラスマイナス)</div>
-        <div class="sval ${netProfit >= 0 ? 'up' : 'down'}" style="font-size: 20px;" id="val-netprofit">¥${netProfit.toLocaleString()}</div>
+      <div class="stat-card" style="background:${netProfit>=0?'rgba(6,193,103,0.1)':'rgba(233,30,99,0.1)'}">
+        <div class="slabel">純利益</div>
+        <div class="sval ${netProfit>=0?'up':'down'}" id="val-netprofit">¥${netProfit.toLocaleString()}</div>
       </div>
       <div class="stat-card">
-        <div class="slabel">月末予測報酬 (着地)</div>
-        <div class="sval" style="color: #BA7517;">¥${estimatedPayout.toLocaleString()}</div>
-        <div class="sdiff neu">※1日平均 ¥${Math.round(dailyAverage).toLocaleString()} ペース</div>
+        <div class="slabel">月末予測報酬</div>
+        <div class="sval" style="color:#BA7517">¥${estPayout.toLocaleString()}</div>
+        <div class="sdiff neu">1日平均 ¥${Math.round(dailyAvg).toLocaleString()} ペース</div>
       </div>
     </div>
     <div class="section-title">月間サマリー</div>
     <div class="stat2">
       <div class="stat-card">
-        <div class="slabel">月間売上</div>
-        <div class="sval">¥${curS.toLocaleString()}</div>
-        <div class="sdiff">${diffHtml(curS, prevS, "前月比")}${diffHtml(curS, lyS, "前年比")}</div>
+        <div class="slabel">月間売上</div><div class="sval">¥${curS.toLocaleString()}</div>
+        <div class="sdiff">${diffHtml(curS,prevS,'前月比')}${diffHtml(curS,lyS,'前年比')}</div>
       </div>
       <div class="stat-card">
-        <div class="slabel">総件数</div>
-        <div class="sval">${curC}件</div>
-        <div class="sdiff">${diffHtml(curC, prevC, "前月比")}${diffHtml(curC, lyC, "前年比")}</div>
+        <div class="slabel">総件数</div><div class="sval">${curC}件</div>
+        <div class="sdiff">${diffHtml(curC,prevC,'前月比')}${diffHtml(curC,lyC,'前年比')}</div>
       </div>
       <div class="stat-card"><div class="slabel">稼働日平均売上</div><div class="sval">¥${avgDaySales.toLocaleString()}</div><div class="sdiff neu">${activeDays.length}日稼働</div></div>
       <div class="stat-card"><div class="slabel">稼働日平均件数</div><div class="sval">${avgActCount}件</div><div class="sdiff neu">単価¥${avgUnit.toLocaleString()}</div></div>
     </div>
     <div class="year-banner">
-      <div><div class="yl">${year}年 累計売上</div><div class="yv">¥${yearS.toLocaleString()}</div></div>
+      <div><div class="yl">${y}年 累計売上</div><div class="yv">¥${yearS.toLocaleString()}</div></div>
       <div style="text-align:right"><div class="yl">累計件数</div><div style="font-size:16px;font-weight:600">${yearC}件</div></div>
     </div>
-    <div class="section-title">プラットフォーム別</div>
-    ${platRows}
+    <div class="section-title">プラットフォーム別</div>${platRows}
     <div class="section-title">天気別 平均日売上</div>
-    <div class="weather-grid">${weatherCards || '<div style="font-size:13px;color:var(--text2)">データがありません</div>'}</div>
+    <div class="weather-grid">${wCards||'<div style="font-size:13px;color:var(--text2)">データがありません</div>'}</div>
     <div class="section-title">高収入ベスト5</div>
-    <div class="rank-list">${rankItems || '<div class="empty">データがありません</div>'}</div>
+    <div class="rank-list">${rankItems||'<div class="empty">データがありません</div>'}</div>
     <div class="section-title">日別売上</div>
     <div class="chart-legend">
       <span><i style="background:#06C167"></i>Uber Eats</span>
       <span><i style="background:#FF6B00"></i>出前館</span>
       <span><i style="background:#E91E63"></i>Rocket Now</span>
     </div>
-    <div style="position:relative;width:100%;height:180px"><canvas id="chart1" role="img" aria-label="日別売上グラフ">売上データ</canvas></div>
+    <div style="position:relative;width:100%;height:180px"><canvas id="chart1"></canvas></div>
     <div class="section-title" style="margin-top:14px">日別配達件数</div>
-    <div style="position:relative;width:100%;height:140px"><canvas id="chart2" role="img" aria-label="日別件数グラフ">件数データ</canvas></div>
+    <div style="position:relative;width:100%;height:140px"><canvas id="chart2"></canvas></div>
   `;
 
-  const newExpenseInput = document.getElementById('inp-expense');
-  newExpenseInput.addEventListener('input', (e) => {
-    const val = Number(e.target.value) || 0;
-    const latestNetProfit = curS - val;
-    const profitEl = document.getElementById('val-netprofit');
-    if (profitEl) {
-      profitEl.textContent = `¥${latestNetProfit.toLocaleString()}`;
-      profitEl.className = latestNetProfit >= 0 ? 'sval up' : 'sval down';
-    }
+  // 経費inputイベント
+  const expInp = document.getElementById('inp-expense');
+  expInp.addEventListener('input', e => {
+    const v = Number(e.target.value)||0;
+    const el = document.getElementById('val-netprofit');
+    if(el){ const n=curS-v; el.textContent=`¥${n.toLocaleString()}`; el.className=n>=0?'sval up':'sval down'; }
   });
-  newExpenseInput.addEventListener('change', (e) => { saveExpense(month, e.target.value); });
+  expInp.addEventListener('change', e => saveExpense(month, e.target.value));
 
-  if (chart1) chart1.destroy();
-  if (chart2) chart2.destroy();
-  if (!f.length) return;
-  // innerHTML挿入後DOMが確定してからChartを描画
-  setTimeout(() => {
-    chart1 = new Chart(document.getElementById('chart1'), {type:'bar',data:{labels,datasets:[
-      {label:'Uber',data:f.map(r=>r.uber.sales),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
-      {label:'出前館',data:f.map(r=>r.demae.sales),backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
-      {label:'Rocket',data:f.map(r=>r.rocket.sales),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{callback:v=>`¥${(v/1000).toFixed(0)}k`,font:{size:10}}}}}});
-    chart2 = new Chart(document.getElementById('chart2'), {type:'bar',data:{labels,datasets:[
-      {label:'Uber',data:f.map(r=>r.uber.count),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
-      {label:'出前館',data:f.map(r=>r.demae.count),backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
-      {label:'Rocket',data:f.map(r=>r.rocket.count),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{font:{size:10},stepSize:1}}}}});
-  }, 0);
+  // ★ グラフ：requestAnimationFrameでブラウザの描画サイクル後に実行
+  if(!f.length) return;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      drawChart('chart1','bar',
+        { labels, datasets:[
+          {label:'Uber',  data:f.map(r=>r.uber.sales),  backgroundColor:'rgba(6,193,103,.75)', borderColor:'#06C167',borderWidth:1},
+          {label:'出前館',data:f.map(r=>r.demae.sales), backgroundColor:'rgba(255,107,0,.75)', borderColor:'#FF6B00',borderWidth:1},
+          {label:'Rocket',data:f.map(r=>r.rocket.sales),backgroundColor:'rgba(233,30,99,.75)', borderColor:'#E91E63',borderWidth:1}
+        ]},
+        {responsive:true,maintainAspectRatio:false,
+         plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},
+         scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{callback:v=>`¥${(v/1000).toFixed(0)}k`,font:{size:10}}}}}
+      );
+      drawChart('chart2','bar',
+        { labels, datasets:[
+          {label:'Uber',  data:f.map(r=>r.uber.count),  backgroundColor:'rgba(6,193,103,.75)', borderColor:'#06C167',borderWidth:1},
+          {label:'出前館',data:f.map(r=>r.demae.count), backgroundColor:'rgba(255,107,0,.75)', borderColor:'#FF6B00',borderWidth:1},
+          {label:'Rocket',data:f.map(r=>r.rocket.count),backgroundColor:'rgba(233,30,99,.75)', borderColor:'#E91E63',borderWidth:1}
+        ]},
+        {responsive:true,maintainAspectRatio:false,
+         plugins:{legend:{display:false}},
+         scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{font:{size:10},stepSize:1}}}}
+      );
+    });
+  });
 }
 
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
 }
 
+// ── 初期化 ───────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('inp-date').value = new Date().toISOString().slice(0,10);
+  // ★ 今日の日付をローカル時間で取得してセット
+  document.getElementById('inp-date').value = todayStr();
 
   document.getElementById('btn-save').addEventListener('click', saveRecord);
-  document.getElementById('btn-prev-month').addEventListener('click', () => changeMonth(-1));
-  document.getElementById('btn-next-month').addEventListener('click', () => changeMonth(1));
-  document.getElementById('btn-prev-day').addEventListener('click', () => changeDay(-1));
-  document.getElementById('btn-next-day').addEventListener('click', () => changeDay(1));
-  document.getElementById('nav-entry').addEventListener('click', () => showPage('entry'));
-  document.getElementById('nav-summary').addEventListener('click', () => showPage('summary'));
+  document.getElementById('btn-prev-month').addEventListener('click', ()=>changeMonth(-1));
+  document.getElementById('btn-next-month').addEventListener('click', ()=>changeMonth(1));
+  document.getElementById('btn-prev-day').addEventListener('click', ()=>changeDay(-1));
+  document.getElementById('btn-next-day').addEventListener('click', ()=>changeDay(1));
+  document.getElementById('nav-entry').addEventListener('click', ()=>showPage('entry'));
+  document.getElementById('nav-summary').addEventListener('click', ()=>showPage('summary'));
+  document.getElementById('inp-date').addEventListener('change', e=>loadEntryForDate(e.target.value));
 
-  // ★ 日付ピッカーを直接変えたときも対応
-  document.getElementById('inp-date').addEventListener('change', (e) => {
-    loadEntryForDate(e.target.value);
-  });
-
+  fetchForecast();
   listenToDatabase();
 });
 </script>
-
-
-</body></html>
+</body>
+</html>
