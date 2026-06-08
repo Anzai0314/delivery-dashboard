@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0057)file:///C:/Users/ahito/Downloads/delivery-tracker-v2.html -->
+<!-- saved from url=(0059)file:///C:/Users/ahito/Downloads/delivery-tracker-v2_1.html -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -148,7 +148,7 @@ body { display: flex; flex-direction: column; }
         </select>
       </div>
     </div>
-    <div class="entry-hint show loaded" id="entry-hint">✓ 保存済みのデータを読み込みました（上書き保存できます）</div>
+    <div class="entry-hint" id="entry-hint"></div>
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
       <div class="plat-inputs">
@@ -302,10 +302,11 @@ function changeMonth(d) { monthOffset += d; renderSummary(); }
 function changeDay(offset) {
   const dateInput = document.getElementById('inp-date');
   if (!dateInput.value) return;
-  const current = new Date(dateInput.value + 'T00:00:00');
-  current.setDate(current.getDate() + offset);
-  dateInput.value = current.toISOString().slice(0, 10);
-  loadEntryForDate(dateInput.value);
+  const [y, m, d] = dateInput.value.split('-').map(Number);
+  const current = new Date(y, m - 1, d + offset);
+  const newDate = `${current.getFullYear()}-${String(current.getMonth()+1).padStart(2,'0')}-${String(current.getDate()).padStart(2,'0')}`;
+  dateInput.value = newDate;
+  loadEntryForDate(newDate);
 }
 
 async function saveExpense(month, amount) {
