@@ -195,7 +195,7 @@ body { display: flex; flex-direction: column; }
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// あなた専用のFirebase設定情報（適用済み）
+// あなた専用のFirebase設定情報
 const firebaseConfig = {
   apiKey: "AIzaSyCKZfC6PtJFVEIgNYEy5nIxrtaw68rinRo",
   authDomain: "delivery-2cac6.firebaseapp.com",
@@ -211,7 +211,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let records = [];
-let expenses = {}; // 月ごとの出費データを格納
+let expenses = {}; 
 let monthOffset = 0;
 let chart1, chart2;
 const wmap = { sunny:'☀️ 晴れ', cloudy:'⛅ 曇り', rainy:'🌧️ 雨', 'heavy-rain':'⛈️ 大雨', snowy:'❄️ 雪' };
@@ -223,7 +223,6 @@ function countOf(r) { return r.uber.count + r.demae.count + r.rocket.count; }
 
 // Firebaseからリアルタイムにデータを取得する処理
 function listenToDatabase() {
-  // 配達記録の同期
   const colRef = collection(db, "delivery_records");
   onSnapshot(colRef, (snapshot) => {
     records = [];
@@ -239,7 +238,6 @@ function listenToDatabase() {
     document.getElementById('sync-status').textContent = "同期エラー";
   });
 
-  // 出費データの同期
   const expRef = collection(db, "monthly_expenses");
   onSnapshot(expRef, (snapshot) => {
     expenses = {};
@@ -275,7 +273,6 @@ function getMonth() {
 }
 function changeMonth(d) { monthOffset += d; renderSummary(); }
 
-// 日付を変更する関数（前日・翌日ボタン用）
 function changeDay(offset) {
   const dateInput = document.getElementById('inp-date');
   if (!dateInput.value) return;
@@ -284,7 +281,6 @@ function changeDay(offset) {
   dateInput.value = current.toISOString().slice(0, 10);
 }
 
-// 出費をFirebaseに保存する処理
 async function saveExpense(month, amount) {
   try {
     await setDoc(doc(db, "monthly_expenses", month), { amount: Number(amount) || 0 });
@@ -293,7 +289,6 @@ async function saveExpense(month, amount) {
   }
 }
 
-// データをFirebaseに保存する処理
 async function saveRecord() {
   const date = document.getElementById('inp-date').value;
   if (!date) { showToast('日付を入力してください'); return; }
@@ -316,7 +311,6 @@ async function saveRecord() {
   }
 }
 
-// Firebaseからデータを削除する処理
 async function deleteRecord(date) {
   if(confirm(`${date}の記録を削除しますか？`)) {
     try {
@@ -328,7 +322,6 @@ async function deleteRecord(date) {
   }
 }
 
-// 差分表示用のHTML生成（前月比・前年比）
 function diffHtml(cur, prev, label = "前月比") {
   if (!prev || prev === 0) return `<div class="sdiff neu">--% ${label}</div>`;
   const pct = Math.round((cur - prev) / prev * 100);
@@ -337,7 +330,6 @@ function diffHtml(cur, prev, label = "前月比") {
   return `<div class="sdiff neu">→ 0% ${label}</div>`;
 }
 
-// 月の最終日（日数）を取得
 function daysInMonth(year, month) {
   return new Date(year, month, 0).getDate();
 }
@@ -387,11 +379,10 @@ function renderSummary() {
   const currentExpense = expenses[month] || 0;
   const netProfit = curS - currentExpense;
 
-  // 【追加：フォーカス＆カーソル位置の記憶】
+  // ★修正ポイント1: 現在の正確なカーソル位置（左から何文字目か）を数値で記憶
   const expenseInput = document.getElementById('inp-expense');
   const isExpenseFocused = (document.activeElement === expenseInput);
-  const selectionStart = expenseInput ? expenseInput.selectionStart : null;
-  const selectionEnd = expenseInput ? expenseInput.selectionEnd : null;
+  const cursorPosition = expenseInput ? expenseInput.selectionStart : 0;
 
   const weatherStats = {};
   f.forEach(r => {
@@ -517,18 +508,15 @@ function renderSummary() {
     <div style="position:relative;width:100%;height:140px"><canvas id="chart2" role="img" aria-label="日別件数グラフ">件数データ</canvas></div>
   `;
 
-  // 出費入力欄のイベントを再設定
   const newExpenseInput = document.getElementById('inp-expense');
   newExpenseInput.addEventListener('input', (e) => {
     saveExpense(month, e.target.value);
   });
 
-  // 【追加：フォーカス＆カーソル位置の復元】
+  // ★修正ポイント2: 記憶していた元のカーソル位置（左から何番目か）にピタッと戻す
   if (isExpenseFocused && newExpenseInput) {
     newExpenseInput.focus();
-    // 文字の最後にカーソルを持っていく
-    const valLength = newExpenseInput.value.length;
-    newExpenseInput.setSelectionRange(valLength, valLength);
+    newExpenseInput.setSelectionRange(cursorPosition, cursorPosition);
   }
 
   if (chart1) chart1.destroy();
