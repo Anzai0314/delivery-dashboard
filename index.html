@@ -379,10 +379,9 @@ function renderSummary() {
   const currentExpense = expenses[month] || 0;
   const netProfit = curS - currentExpense;
 
-  // ★修正ポイント1: 現在の正確なカーソル位置（左から何文字目か）を数値で記憶
+  // フォーカス状態のみチェック
   const expenseInput = document.getElementById('inp-expense');
   const isExpenseFocused = (document.activeElement === expenseInput);
-  const cursorPosition = expenseInput ? expenseInput.selectionStart : 0;
 
   const weatherStats = {};
   f.forEach(r => {
@@ -452,7 +451,7 @@ function renderSummary() {
         <div class="slabel">今月の出費（経費入力）</div>
         <div class="expense-input-box">
           <span>¥</span>
-          <input type="number" id="inp-expense" value="${currentExpense || ''}" placeholder="0" inputmode="numeric">
+          <input type="number" id="inp-expense" value="${currentExpense === 0 ? '' : currentExpense}" placeholder="0" inputmode="numeric">
         </div>
       </div>
       <div class="stat-card" style="background: ${netProfit >= 0 ? 'rgba(6,193,103,0.1)' : 'rgba(233,30,99,0.1)'};">
@@ -513,10 +512,9 @@ function renderSummary() {
     saveExpense(month, e.target.value);
   });
 
-  // ★修正ポイント2: 記憶していた元のカーソル位置（左から何番目か）にピタッと戻す
+  // フォーカスだけを元に戻す（カーソルの無理な数値指定は廃止してブラウザ標準に任せる）
   if (isExpenseFocused && newExpenseInput) {
     newExpenseInput.focus();
-    newExpenseInput.setSelectionRange(cursorPosition, cursorPosition);
   }
 
   if (chart1) chart1.destroy();
