@@ -40,9 +40,13 @@ body { display: flex; flex-direction: column; }
 .nav-item i { font-size: 22px; }
 
 /* Entry */
-.date-weather-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.date-weather-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; margin-bottom: 14px; }
+.date-input-wrap { display: flex; align-items: flex-end; gap: 4px; }
+.date-btn { background: var(--bg2); border: 0.5px solid var(--border2); color: var(--text); padding: 10px 8px; border-radius: var(--radius); cursor: pointer; font-size: 12px; height: 38px; display: flex; align-items: center; justify-content: center; }
+.date-btn:active { background: var(--bg3); }
+.field { flex: 1; display: flex; flex-direction: column; }
 .field label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 4px; }
-.field input, .field select { width: 100%; padding: 10px 12px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 14px; -webkit-appearance: none; appearance: none; }
+.field input, .field select { width: 100%; padding: 10px 12px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 14px; -webkit-appearance: none; appearance: none; height: 38px; }
 .plat-block { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px; margin-bottom: 10px; }
 .plat-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; font-weight: 600; }
 .plat-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
@@ -58,10 +62,13 @@ body { display: flex; flex-direction: column; }
 .month-bar button { background: none; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 7px 14px; cursor: pointer; color: var(--text); font-size: 13px; }
 .month-bar span { font-size: 15px; font-weight: 600; }
 .stat2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.stat-card { background: var(--bg2); border-radius: var(--radius); padding: 12px; }
+.stat-card { background: var(--bg2); border-radius: var(--radius); padding: 12px; position: relative; overflow: hidden; }
 .stat-card .slabel { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
 .stat-card .sval { font-size: 18px; font-weight: 600; }
-.stat-card .sdiff { font-size: 11px; margin-top: 3px; }
+.stat-card .sdiff { font-size: 11px; margin-top: 3px; display: flex; flex-direction: column; gap: 1px; }
+.stat-card-full { grid-column: span 2; background: var(--bg3); border: 0.5px solid var(--border); }
+.expense-input-box { display: flex; align-items: center; gap: 10px; background: var(--bg); padding: 6px 12px; border-radius: var(--radius); margin-top: 6px; border: 0.5px solid var(--border2); }
+.expense-input-box input { border: none; background: transparent; color: var(--text); font-size: 15px; font-weight: 600; width: 100%; outline: none; }
 .up { color: var(--up); } .down { color: var(--down); } .neu { color: var(--text2); }
 .year-banner { background: var(--bg2); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
 .year-banner .yl { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
@@ -122,7 +129,11 @@ body { display: flex; flex-direction: column; }
 <div class="main">
   <div id="page-entry" class="page active">
     <div class="date-weather-row">
-      <div class="field"><label>日付</label><input type="date" id="inp-date"></div>
+      <div class="date-input-wrap">
+        <button class="date-btn" id="btn-prev-day"><i class="ti ti-chevron-left"></i>前日</button>
+        <div class="field"><label>日付</label><input type="date" id="inp-date"></div>
+        <button class="date-btn" id="btn-next-day">翌日<i class="ti ti-chevron-right"></i></button>
+      </div>
       <div class="field"><label>天候</label>
         <select id="inp-weather">
           <option value="sunny">☀️ 晴れ</option>
@@ -200,6 +211,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let records = [];
+let expenses = {}; // 月ごとの出費データを格納
 let monthOffset = 0;
 let chart1, chart2;
 const wmap = { sunny:'☀️ 晴れ', cloudy:'⛅ 曇り', rainy:'🌧️ 雨', 'heavy-rain':'⛈️ 大雨', snowy:'❄️ 雪' };
@@ -211,6 +223,7 @@ function countOf(r) { return r.uber.count + r.demae.count + r.rocket.count; }
 
 // Firebaseからリアルタイムにデータを取得する処理
 function listenToDatabase() {
+  // 配達記録の同期
   const colRef = collection(db, "delivery_records");
   onSnapshot(colRef, (snapshot) => {
     records = [];
@@ -219,13 +232,27 @@ function listenToDatabase() {
     });
     records.sort((a,b) => a.date.localeCompare(b.date));
     
-    if (document.getElementById('page-summary').classList.contains('active')) renderSummary();
-    if (document.getElementById('page-list').classList.contains('active')) renderList();
+    updateViews();
     document.getElementById('sync-status').textContent = "同期完了 ✓";
   }, (error) => {
     console.error("Firebaseの読み込みエラー:", error);
     document.getElementById('sync-status').textContent = "同期エラー";
   });
+
+  // 出費データの同期
+  const expRef = collection(db, "monthly_expenses");
+  onSnapshot(expRef, (snapshot) => {
+    expenses = {};
+    snapshot.forEach((doc) => {
+      expenses[doc.id] = doc.data().amount || 0;
+    });
+    updateViews();
+  });
+}
+
+function updateViews() {
+  if (document.getElementById('page-summary').classList.contains('active')) renderSummary();
+  if (document.getElementById('page-list').classList.contains('active')) renderList();
 }
 
 function clearInputs() {
@@ -248,6 +275,24 @@ function getMonth() {
 }
 function changeMonth(d) { monthOffset += d; renderSummary(); }
 
+// 日付を変更する関数（前日・翌日ボタン用）
+function changeDay(offset) {
+  const dateInput = document.getElementById('inp-date');
+  if (!dateInput.value) return;
+  const current = new Date(dateInput.value);
+  current.setDate(current.getDate() + offset);
+  dateInput.value = current.toISOString().slice(0, 10);
+}
+
+// 出費をFirebaseに保存する処理
+async function saveExpense(month, amount) {
+  try {
+    await setDoc(doc(db, "monthly_expenses", month), { amount: Number(amount) || 0 });
+  } catch (e) {
+    console.error("出費の保存失敗:", e);
+  }
+}
+
 // データをFirebaseに保存する処理
 async function saveRecord() {
   const date = document.getElementById('inp-date').value;
@@ -265,6 +310,7 @@ async function saveRecord() {
     await setDoc(doc(db, "delivery_records", date), rec);
     showToast('クラウドに保存しました ✓');
     clearInputs();
+    // 保存後に日付を翌日に自動で進める場合はここに `changeDay(1);` を入れることも可能です
   } catch (e) {
     console.error(e);
     showToast('保存に失敗しました');
@@ -283,21 +329,34 @@ async function deleteRecord(date) {
   }
 }
 
-function diffHtml(cur, prev) {
-  if (prev === 0) return '';
+// 差分表示用のHTML生成（前月比・前年比）
+function diffHtml(cur, prev, label = "前月比") {
+  if (!prev || prev === 0) return `<div class="sdiff neu">--% ${label}</div>`;
   const pct = Math.round((cur - prev) / prev * 100);
-  if (pct > 0) return `<div class="sdiff up">▲ ${pct}% 前月比</div>`;
-  if (pct < 0) return `<div class="sdiff down">▼ ${Math.abs(pct)}% 前月比</div>`;
-  return `<div class="sdiff neu">→ 前月同等</div>`;
+  if (pct > 0) return `<div class="sdiff up">▲ ${pct}% ${label}</div>`;
+  if (pct < 0) return `<div class="sdiff down">▼ ${Math.abs(pct)}% ${label}</div>`;
+  return `<div class="sdiff neu">→ 0% ${label}</div>`;
+}
+
+// 月の最終日（日数）を取得
+function daysInMonth(year, month) {
+  return new Date(year, month, 0).getDate();
 }
 
 function renderSummary() {
   const month = getMonth();
   document.getElementById('month-label').textContent = month.replace('-','年') + '月';
+  
   const f = records.filter(r => r.date.startsWith(month));
   const [y, m] = month.split('-').map(Number);
+  
+  // 前月・前年の月キー作成
   const prevM = m===1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
+  const lastYearM = `${y-1}-${String(m).padStart(2,'0')}`;
+  
   const pf = records.filter(r => r.date.startsWith(prevM));
+  const lyf = records.filter(r => r.date.startsWith(lastYearM)); // 前年同月
+  
   const year = month.slice(0,4);
   const yf = records.filter(r => r.date.startsWith(year));
 
@@ -305,6 +364,9 @@ function renderSummary() {
   const curC = f.reduce((s,r) => s+countOf(r), 0);
   const prevS = pf.reduce((s,r) => s+totalOf(r), 0);
   const prevC = pf.reduce((s,r) => s+countOf(r), 0);
+  const lyS = lyf.reduce((s,r) => s+totalOf(r), 0); // 前年売上
+  const lyC = lyf.reduce((s,r) => s+countOf(r), 0); // 前年件数
+  
   const yearS = yf.reduce((s,r) => s+totalOf(r), 0);
   const yearC = yf.reduce((s,r) => s+countOf(r), 0);
 
@@ -313,6 +375,22 @@ function renderSummary() {
   const totalActCount = activeDays.reduce((s,r) => s+countOf(r), 0);
   const avgActCount = activeDays.length > 0 ? Math.round(totalActCount / activeDays.length * 10) / 10 : 0;
   const avgUnit = curC > 0 ? Math.round(curS / curC) : 0;
+
+  // 月末予測（着地予測）報酬の計算
+  const totalDaysInMonth = daysInMonth(y, m);
+  const today = new Date();
+  let passedDays = totalDaysInMonth; 
+  
+  // 選択月が今月の場合、今日までの経過日数で計算。過去・未来の月は全日数で割る
+  if (today.toISOString().slice(0,7) === month) {
+    passedDays = today.getDate(); 
+  }
+  const dailyAverage = curS / (passedDays || 1); // 1日あたりの平均売上
+  const estimatedPayout = Math.round(dailyAverage * totalDaysInMonth);
+
+  // 出費と収支プラスマイナス
+  const currentExpense = expenses[month] || 0;
+  const netProfit = curS - currentExpense;
 
   const weatherStats = {};
   f.forEach(r => {
@@ -374,11 +452,46 @@ function renderSummary() {
   }).join('');
 
   const labels = f.map(r => r.date.slice(8)+'日');
+  
   document.getElementById('summary-content').innerHTML = `
+    <div class="section-title">収支管理・プラスマイナス</div>
+    <div class="stat2" style="margin-bottom: 16px;">
+      <div class="stat-card stat-card-full">
+        <div class="slabel">今月の出費（経費入力）</div>
+        <div class="expense-input-box">
+          <span>¥</span>
+          <input type="number" id="inp-expense" value="${currentExpense}" placeholder="0" inputmode="numeric">
+        </div>
+      </div>
+      <div class="stat-card" style="background: ${netProfit >= 0 ? 'rgba(6,193,103,0.1)' : 'rgba(233,30,99,0.1)'};">
+        <div class="slabel">純利益 (プラスマイナス)</div>
+        <div class="sval ${netProfit >= 0 ? 'up' : 'down'}" style="font-size: 20px;">¥${netProfit.toLocaleString()}</div>
+      </div>
+      <div class="stat-card">
+        <div class="slabel">月末予測報酬 (着地)</div>
+        <div class="sval" style="color: #BA7517;">¥${estimatedPayout.toLocaleString()}</div>
+        <div class="sdiff neu">※1日平均 ¥${Math.round(dailyAverage).toLocaleString()} ペース</div>
+      </div>
+    </div>
+
     <div class="section-title">月間サマリー</div>
     <div class="stat2">
-      <div class="stat-card"><div class="slabel">月間売上</div><div class="sval">¥${curS.toLocaleString()}</div>${diffHtml(curS,prevS)}</div>
-      <div class="stat-card"><div class="slabel">総件数</div><div class="sval">${curC}件</div>${diffHtml(curC,prevC)}</div>
+      <div class="stat-card">
+        <div class="slabel">月間売上</div>
+        <div class="sval">¥${curS.toLocaleString()}</div>
+        <div class="sdiff">
+          ${diffHtml(curS, prevS, "前月比")}
+          ${diffHtml(curS, lyS, "前年比")}
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="slabel">総件数</div>
+        <div class="sval">${curC}件</div>
+        <div class="sdiff">
+          ${diffHtml(curC, prevC, "前月比")}
+          ${diffHtml(curC, lyC, "前年比")}
+        </div>
+      </div>
       <div class="stat-card"><div class="slabel">稼働日平均売上</div><div class="sval">¥${avgDaySales.toLocaleString()}</div><div class="sdiff neu">${activeDays.length}日稼働</div></div>
       <div class="stat-card"><div class="slabel">稼働日平均件数</div><div class="sval">${avgActCount}件</div><div class="sdiff neu">単価¥${avgUnit.toLocaleString()}</div></div>
     </div>
@@ -402,6 +515,11 @@ function renderSummary() {
     <div class="section-title" style="margin-top:14px">日別配達件数</div>
     <div style="position:relative;width:100%;height:140px"><canvas id="chart2" role="img" aria-label="日別件数グラフ">件数データ</canvas></div>
   `;
+
+  // 出費入力欄のイベントを設定（入力されたら即時Firebaseに保存）
+  document.getElementById('inp-expense').addEventListener('input', (e) => {
+    saveExpense(month, e.target.value);
+  });
 
   if (chart1) chart1.destroy();
   if (chart2) chart2.destroy();
@@ -471,6 +589,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-next-month').addEventListener('click', () => changeMonth(1));
   document.getElementById('list-month').addEventListener('change', renderList);
   
+  // 前日・翌日ボタンのクリックイベント追加
+  document.getElementById('btn-prev-day').addEventListener('click', () => changeDay(-1));
+  document.getElementById('btn-next-day').addEventListener('click', () => changeDay(1));
+
   document.getElementById('nav-entry').addEventListener('click', () => showPage('entry'));
   document.getElementById('nav-summary').addEventListener('click', () => showPage('summary'));
   document.getElementById('nav-list').addEventListener('click', () => showPage('list'));
