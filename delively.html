@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="配達記録">
+<title>配達記録</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f5f5f4; --bg3: #eeede9;
+  --text: #1a1a18; --text2: #6b6b67; --text3: #9a9a96;
+  --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+  --radius: 8px; --radius-lg: 12px;
+  --uber: #06C167; --demae: #FF6B00; --rocket: #E91E63;
+  --up: #06C167; --down: #E91E63;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1a; --bg2: #262624; --bg3: #2e2e2c;
+    --text: #f0efeb; --text2: #9a9a96; --text3: #6b6b67;
+    --border: rgba(255,255,255,0.12); --border2: rgba(255,255,255,0.22);
+  }
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif; font-size: 14px; }
+body { display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; border-bottom: 0.5px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 10; }
+.topbar-title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.sync-status { font-size: 11px; color: var(--text3); }
+.main { flex: 1; overflow-y: auto; padding-bottom: 70px; }
+.page { display: none; padding: 16px; }
+.page.active { display: block; }
+.bottom-nav { display: flex; border-top: 0.5px solid var(--border); background: var(--bg); padding: 6px 0 max(2px, env(safe-area-inset-bottom)); position: fixed; bottom: 0; left: 0; right: 0; }
+.nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; cursor: pointer; border: none; background: none; color: var(--text2); font-size: 10px; border-radius: var(--radius); }
+.nav-item.active { color: var(--text); }
+.nav-item i { font-size: 22px; }
+
+/* Entry */
+.date-weather-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.field label { display: block; font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+.field input, .field select { width: 100%; padding: 10px 12px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 14px; -webkit-appearance: none; appearance: none; }
+.plat-block { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px; margin-bottom: 10px; }
+.plat-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13px; font-weight: 600; }
+.plat-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.plat-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.plat-inputs label { font-size: 11px; color: var(--text2); display: block; margin-bottom: 3px; }
+.plat-inputs input { width: 100%; padding: 9px 10px; border-radius: var(--radius); border: 0.5px solid var(--border); background: var(--bg2); color: var(--text); font-size: 14px; }
+.save-btn { width: 100%; padding: 14px; border-radius: var(--radius-lg); background: var(--text); color: var(--bg); border: none; cursor: pointer; font-size: 15px; font-weight: 600; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.save-btn:active { opacity: .8; }
+
+/* Summary */
+.section-title { font-size: 11px; font-weight: 600; color: var(--text2); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: .5px; }
+.month-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.month-bar button { background: none; border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 7px 14px; cursor: pointer; color: var(--text); font-size: 13px; }
+.month-bar span { font-size: 15px; font-weight: 600; }
+.stat2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.stat-card { background: var(--bg2); border-radius: var(--radius); padding: 12px; }
+.stat-card .slabel { font-size: 11px; color: var(--text2); margin-bottom: 4px; }
+.stat-card .sval { font-size: 18px; font-weight: 600; }
+.stat-card .sdiff { font-size: 11px; margin-top: 3px; }
+.up { color: var(--up); } .down { color: var(--down); } .neu { color: var(--text2); }
+.year-banner { background: var(--bg2); border-radius: var(--radius-lg); padding: 14px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+.year-banner .yl { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+.year-banner .yv { font-size: 22px; font-weight: 600; }
+.plat-row { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.bar-wrap { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin: -2px 0 6px; }
+.bar-fill { height: 100%; border-radius: 3px; }
+.weather-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.weather-card { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.weather-card .wicon { font-size: 20px; margin-bottom: 3px; }
+.weather-card .wname { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+.weather-card .wval { font-size: 15px; font-weight: 600; }
+.weather-card .wsub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.rank-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.rank-item { display: flex; align-items: center; gap: 10px; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 12px; }
+.rank-num { font-size: 15px; font-weight: 700; min-width: 22px; color: var(--text2); }
+.rank-num.gold { color: #BA7517; } .rank-num.silver { color: #888780; } .rank-num.bronze { color: #993C1D; }
+.rank-info { flex: 1; }
+.rank-date { font-size: 13px; font-weight: 600; }
+.rank-detail { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.rank-amt { font-size: 15px; font-weight: 700; color: var(--uber); }
+.chart-section { margin-bottom: 14px; }
+.chart-label { font-size: 11px; color: var(--text2); margin-bottom: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+.chart-legend { display: flex; gap: 12px; margin-bottom: 8px; font-size: 11px; color: var(--text2); flex-wrap: wrap; }
+.chart-legend span { display: flex; align-items: center; gap: 4px; }
+.chart-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+/* List */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+.filter-bar input { flex: 1; padding: 8px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; }
+.record-list { display: flex; flex-direction: column; gap: 8px; }
+.record-card { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px; }
+.record-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.record-total { font-size: 14px; font-weight: 700; color: var(--uber); }
+.record-details { display: flex; gap: 6px; flex-wrap: wrap; }
+.rpill { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.rpill-uber { background: #d4f5e3; color: #0a5c30; }
+.rpill-demae { background: #fde8d4; color: #8c3a00; }
+.rpill-rocket { background: #fce4ec; color: #880e4f; }
+@media (prefers-color-scheme: dark) {
+  .rpill-uber { background: #0a3d22; color: #5DCAA5; }
+  .rpill-demae { background: #3d2200; color: #EF9F27; }
+  .rpill-rocket { background: #3d0a1e; color: #ED93B1; }
+}
+.rec-del-btn { background: none; border: none; cursor: pointer; color: var(--text2); padding: 4px; font-size: 16px; }
+.empty { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 13px; }
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; z-index: 100; }
+.toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-title"><i class="ti ti-motorbike"></i> 配達記録</span>
+  <span class="sync-status" id="sync-status">localStorage保存</span>
+</div>
+
+<div class="main">
+  <!-- 入力 -->
+  <div id="page-entry" class="page active">
+    <div class="date-weather-row">
+      <div class="field"><label>日付</label><input type="date" id="inp-date" onchange="onDateChange()"></div>
+      <div class="field"><label>天候</label>
+        <select id="inp-weather">
+          <option value="sunny">☀️ 晴れ</option>
+          <option value="cloudy">⛅ 曇り</option>
+          <option value="rainy">🌧️ 雨</option>
+          <option value="heavy-rain">⛈️ 大雨</option>
+          <option value="snowy">❄️ 雪</option>
+        </select>
+      </div>
+    </div>
+    <div class="plat-block">
+      <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
+      <div class="plat-inputs">
+        <div><label>売上 (円)</label><input type="number" id="uber-s" placeholder="0" inputmode="numeric"></div>
+        <div><label>配達件数</label><input type="number" id="uber-c" placeholder="0" inputmode="numeric"></div>
+      </div>
+    </div>
+    <div class="plat-block">
+      <div class="plat-header"><div class="plat-dot" style="background:var(--demae)"></div>出前館</div>
+      <div class="plat-inputs">
+        <div><label>売上 (円)</label><input type="number" id="demae-s" placeholder="0" inputmode="numeric"></div>
+        <div><label>配達件数</label><input type="number" id="demae-c" placeholder="0" inputmode="numeric"></div>
+      </div>
+    </div>
+    <div class="plat-block">
+      <div class="plat-header"><div class="plat-dot" style="background:var(--rocket)"></div>Rocket Now</div>
+      <div class="plat-inputs">
+        <div><label>売上 (円)</label><input type="number" id="rocket-s" placeholder="0" inputmode="numeric"></div>
+        <div><label>配達件数</label><input type="number" id="rocket-c" placeholder="0" inputmode="numeric"></div>
+      </div>
+    </div>
+    <button class="save-btn" onclick="saveRecord()"><i class="ti ti-device-floppy"></i> 保存する</button>
+  </div>
+
+  <!-- 分析 -->
+  <div id="page-summary" class="page">
+    <div class="month-bar">
+      <button onclick="changeMonth(-1)"><i class="ti ti-chevron-left"></i></button>
+      <span id="month-label"></span>
+      <button onclick="changeMonth(1)"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <div id="summary-content"></div>
+  </div>
+
+  <!-- 履歴 -->
+  <div id="page-list" class="page">
+    <div class="filter-bar"><input type="month" id="list-month"></div>
+    <div class="record-list" id="record-list"></div>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-item active" id="nav-entry" onclick="showPage('entry')"><i class="ti ti-plus"></i>入力</button>
+  <button class="nav-item" id="nav-summary" onclick="showPage('summary')"><i class="ti ti-chart-bar"></i>分析</button>
+  <button class="nav-item" id="nav-list" onclick="showPage('list')"><i class="ti ti-list"></i>履歴</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'delivery_records_v1';
+let records = [];
+let monthOffset = 0;
+let chart1, chart2;
+const wmap = { sunny:'☀️ 晴れ', cloudy:'⛅ 曇り', rainy:'🌧️ 雨', 'heavy-rain':'⛈️ 大雨', snowy:'❄️ 雪' };
+const wmapS = { sunny:'☀️', cloudy:'⛅', rainy:'🌧️', 'heavy-rain':'⛈️', snowy:'❄️' };
+const inputIds = ['uber-s','uber-c','demae-s','demae-c','rocket-s','rocket-c'];
+
+function totalOf(r) { return r.uber.sales + r.demae.sales + r.rocket.sales; }
+function countOf(r) { return r.uber.count + r.demae.count + r.rocket.count; }
+
+function loadData() {
+  try { const d = localStorage.getItem(STORAGE_KEY); if (d) records = JSON.parse(d); }
+  catch(e) { records = []; }
+}
+function saveData() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); return true; }
+  catch(e) { return false; }
+}
+
+function clearInputs() {
+  inputIds.forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('inp-weather').value = 'sunny';
+}
+function onDateChange() { clearInputs(); }
+
+function showPage(p) {
+  ['entry','summary','list'].forEach(n => {
+    document.getElementById('page-'+n).classList.toggle('active', n===p);
+    document.getElementById('nav-'+n).classList.toggle('active', n===p);
+  });
+  if (p === 'summary') renderSummary();
+  if (p === 'list') renderList();
+}
+
+function getMonth() {
+  const d = new Date(); d.setMonth(d.getMonth() + monthOffset);
+  return d.toISOString().slice(0,7);
+}
+function changeMonth(d) { monthOffset += d; renderSummary(); }
+
+function saveRecord() {
+  const date = document.getElementById('inp-date').value;
+  if (!date) { showToast('日付を入力してください'); return; }
+  const rec = {
+    date, weather: document.getElementById('inp-weather').value,
+    uber: { sales: +document.getElementById('uber-s').value||0, count: +document.getElementById('uber-c').value||0 },
+    demae: { sales: +document.getElementById('demae-s').value||0, count: +document.getElementById('demae-c').value||0 },
+    rocket: { sales: +document.getElementById('rocket-s').value||0, count: +document.getElementById('rocket-c').value||0 }
+  };
+  const idx = records.findIndex(r => r.date === date);
+  if (idx >= 0) records[idx] = rec; else records.push(rec);
+  records.sort((a,b) => a.date.localeCompare(b.date));
+  const ok = saveData();
+  showToast(ok ? '保存しました ✓' : '保存に失敗しました');
+  clearInputs();
+}
+
+function deleteRecord(date) {
+  records = records.filter(r => r.date !== date);
+  saveData(); renderList();
+}
+
+function diffHtml(cur, prev) {
+  if (prev === 0) return '';
+  const pct = Math.round((cur - prev) / prev * 100);
+  if (pct > 0) return `<div class="sdiff up">▲ ${pct}% 前月比</div>`;
+  if (pct < 0) return `<div class="sdiff down">▼ ${Math.abs(pct)}% 前月比</div>`;
+  return `<div class="sdiff neu">→ 前月同等</div>`;
+}
+
+function renderSummary() {
+  const month = getMonth();
+  document.getElementById('month-label').textContent = month.replace('-','年') + '月';
+  const f = records.filter(r => r.date.startsWith(month));
+  const [y, m] = month.split('-').map(Number);
+  const prevM = m===1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
+  const pf = records.filter(r => r.date.startsWith(prevM));
+  const year = month.slice(0,4);
+  const yf = records.filter(r => r.date.startsWith(year));
+
+  const curS = f.reduce((s,r) => s+totalOf(r), 0);
+  const curC = f.reduce((s,r) => s+countOf(r), 0);
+  const prevS = pf.reduce((s,r) => s+totalOf(r), 0);
+  const prevC = pf.reduce((s,r) => s+countOf(r), 0);
+  const yearS = yf.reduce((s,r) => s+totalOf(r), 0);
+  const yearC = yf.reduce((s,r) => s+countOf(r), 0);
+
+  const activeDays = f.filter(r => totalOf(r) > 0);
+  const avgDaySales = activeDays.length > 0 ? Math.round(curS / activeDays.length) : 0;
+  const totalActCount = activeDays.reduce((s,r) => s+countOf(r), 0);
+  const avgActCount = activeDays.length > 0 ? Math.round(totalActCount / activeDays.length * 10) / 10 : 0;
+  const avgUnit = curC > 0 ? Math.round(curS / curC) : 0;
+
+  const weatherStats = {};
+  f.forEach(r => {
+    const w = r.weather || 'sunny';
+    if (!weatherStats[w]) weatherStats[w] = { sales:0, count:0, days:0 };
+    weatherStats[w].sales += totalOf(r);
+    weatherStats[w].count += countOf(r);
+    if (totalOf(r) > 0) weatherStats[w].days++;
+  });
+
+  const top5 = [...f].sort((a,b) => totalOf(b)-totalOf(a)).slice(0,5);
+  const plats = [{k:'uber',n:'Uber Eats',c:'#06C167'},{k:'demae',n:'出前館',c:'#FF6B00'},{k:'rocket',n:'Rocket Now',c:'#E91E63'}];
+
+  const platRows = plats.map(p => {
+    const s = f.reduce((a,r) => a+r[p.k].sales, 0);
+    const c = f.reduce((a,r) => a+r[p.k].count, 0);
+    const u = c > 0 ? Math.round(s/c) : 0;
+    const pct = curS > 0 ? Math.round(s/curS*100) : 0;
+    return `<div class="plat-row">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="plat-dot" style="background:${p.c}"></div>
+        <div><div style="font-size:13px;font-weight:600">${p.n}</div>
+        <div style="font-size:11px;color:var(--text2)">${c}件 / 単価¥${u.toLocaleString()}</div></div>
+      </div>
+      <div style="text-align:right"><div style="font-size:14px;font-weight:600">¥${s.toLocaleString()}</div>
+      <div style="font-size:11px;color:var(--text2)">${pct}%</div></div>
+    </div>
+    <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${p.c}"></div></div>`;
+  }).join('');
+
+  const weatherOrder = ['sunny','cloudy','rainy','heavy-rain','snowy'];
+  const weatherCards = weatherOrder.filter(w => weatherStats[w]).map(w => {
+    const ws = weatherStats[w];
+    const avgS = ws.days > 0 ? Math.round(ws.sales/ws.days) : 0;
+    const avgC = ws.days > 0 ? Math.round(ws.count/ws.days*10)/10 : 0;
+    return `<div class="weather-card">
+      <div class="wicon">${wmapS[w]}</div>
+      <div class="wname">${wmap[w].split(' ')[1]}</div>
+      <div class="wval">¥${avgS.toLocaleString()}<span style="font-size:11px;font-weight:400">/日</span></div>
+      <div class="wsub">${ws.days}日稼働 / 平均${avgC}件</div>
+    </div>`;
+  }).join('');
+
+  const rankColors = ['gold','silver','bronze','',''];
+  const rankItems = top5.map((r,i) => {
+    const t = totalOf(r); const c = countOf(r); const u = c>0 ? Math.round(t/c) : 0;
+    const parts = [];
+    if (r.uber.sales>0) parts.push(`U:¥${r.uber.sales.toLocaleString()}`);
+    if (r.demae.sales>0) parts.push(`出:¥${r.demae.sales.toLocaleString()}`);
+    if (r.rocket.sales>0) parts.push(`R:¥${r.rocket.sales.toLocaleString()}`);
+    return `<div class="rank-item">
+      <div class="rank-num ${rankColors[i]}">${i+1}</div>
+      <div class="rank-info">
+        <div class="rank-date">${r.date.slice(5).replace('-','/')} ${wmapS[r.weather]||'☀️'}</div>
+        <div class="rank-detail">${c}件 / 単価¥${u.toLocaleString()} / ${parts.join(' ')}</div>
+      </div>
+      <div class="rank-amt">¥${t.toLocaleString()}</div>
+    </div>`;
+  }).join('');
+
+  const labels = f.map(r => r.date.slice(8)+'日');
+  document.getElementById('summary-content').innerHTML = `
+    <div class="section-title">月間サマリー</div>
+    <div class="stat2">
+      <div class="stat-card"><div class="slabel">月間売上</div><div class="sval">¥${curS.toLocaleString()}</div>${diffHtml(curS,prevS)}</div>
+      <div class="stat-card"><div class="slabel">総件数</div><div class="sval">${curC}件</div>${diffHtml(curC,prevC)}</div>
+      <div class="stat-card"><div class="slabel">稼働日平均売上</div><div class="sval">¥${avgDaySales.toLocaleString()}</div><div class="sdiff neu">${activeDays.length}日稼働</div></div>
+      <div class="stat-card"><div class="slabel">稼働日平均件数</div><div class="sval">${avgActCount}件</div><div class="sdiff neu">単価¥${avgUnit.toLocaleString()}</div></div>
+    </div>
+    <div class="year-banner">
+      <div><div class="yl">${year}年 累計売上</div><div class="yv">¥${yearS.toLocaleString()}</div></div>
+      <div style="text-align:right"><div class="yl">累計件数</div><div style="font-size:16px;font-weight:600">${yearC}件</div></div>
+    </div>
+    <div class="section-title">プラットフォーム別</div>
+    ${platRows}
+    <div class="section-title">天気別 平均日売上</div>
+    <div class="weather-grid">${weatherCards || '<div style="font-size:13px;color:var(--text2)">データがありません</div>'}</div>
+    <div class="section-title">高収入ベスト5</div>
+    <div class="rank-list">${rankItems || '<div class="empty">データがありません</div>'}</div>
+    <div class="section-title">日別売上</div>
+    <div class="chart-legend">
+      <span><i style="background:#06C167"></i>Uber Eats</span>
+      <span><i style="background:#FF6B00"></i>出前館</span>
+      <span><i style="background:#E91E63"></i>Rocket Now</span>
+    </div>
+    <div style="position:relative;width:100%;height:180px"><canvas id="chart1" role="img" aria-label="日別売上グラフ">売上データ</canvas></div>
+    <div class="section-title" style="margin-top:14px">日別配達件数</div>
+    <div style="position:relative;width:100%;height:140px"><canvas id="chart2" role="img" aria-label="日別件数グラフ">件数データ</canvas></div>
+  `;
+
+  if (chart1) chart1.destroy();
+  if (chart2) chart2.destroy();
+  if (!f.length) return;
+  chart1 = new Chart(document.getElementById('chart1'), {type:'bar',data:{labels,datasets:[
+    {label:'Uber',data:f.map(r=>r.uber.sales),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
+    {label:'出前館',data:f.map(r=>r.demae.sales),backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
+    {label:'Rocket',data:f.map(r=>r.rocket.sales),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{callback:v=>`¥${(v/1000).toFixed(0)}k`,font:{size:10}}}}}});
+  chart2 = new Chart(document.getElementById('chart2'), {type:'bar',data:{labels,datasets:[
+    {label:'Uber',data:f.map(r=>r.uber.count),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
+    {label:'出前館',data:f.map(r=>r.demae.count),backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
+    {label:'Rocket',data:f.map(r=>r.rocket.count),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{font:{size:10},stepSize:1}}}}});
+}
+
+function renderList() {
+  const month = document.getElementById('list-month').value;
+  let f = month ? records.filter(r => r.date.startsWith(month)) : [...records];
+  f = f.slice().reverse();
+  const container = document.getElementById('record-list');
+  if (!f.length) { container.innerHTML = '<div class="empty">データがありません</div>'; return; }
+  container.innerHTML = f.map(r => {
+    const total = totalOf(r);
+    const uP = r.uber.count>0 ? Math.round(r.uber.sales/r.uber.count) : 0;
+    const dP = r.demae.count>0 ? Math.round(r.demae.sales/r.demae.count) : 0;
+    const rP = r.rocket.count>0 ? Math.round(r.rocket.sales/r.rocket.count) : 0;
+    return `<div class="record-card">
+      <div class="record-top">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:14px;font-weight:600">${r.date.slice(5).replace('-','/')}</span>
+          <span style="font-size:16px">${wmapS[r.weather]||'☀️'}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="record-total">¥${total.toLocaleString()}</span>
+          <button class="rec-del-btn" onclick="deleteRecord('${r.date}')" aria-label="削除"><i class="ti ti-trash"></i></button>
+        </div>
+      </div>
+      <div class="record-details">
+        ${r.uber.count>0?`<span class="rpill rpill-uber">Uber ¥${r.uber.sales.toLocaleString()} / ${r.uber.count}件 / ¥${uP.toLocaleString()}</span>`:''}
+        ${r.demae.count>0?`<span class="rpill rpill-demae">出前館 ¥${r.demae.sales.toLocaleString()} / ${r.demae.count}件 / ¥${dP.toLocaleString()}</span>`:''}
+        ${r.rocket.count>0?`<span class="rpill rpill-rocket">Rocket ¥${r.rocket.sales.toLocaleString()} / ${r.rocket.count}件 / ¥${rP.toLocaleString()}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+document.getElementById('list-month').addEventListener('change', renderList);
+
+loadData();
+document.getElementById('inp-date').value = new Date().toISOString().slice(0,10);
+document.getElementById('list-month').value = new Date().toISOString().slice(0,7);
+renderSummary();
+</script>
+</body>
+</html>
