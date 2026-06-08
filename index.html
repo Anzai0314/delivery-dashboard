@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0057)file:///C:/Users/ahito/Downloads/delivery-tracker-v2.html -->
+<html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="配達記録">
 <title>配達記録</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="stylesheet" href="./配達記録_files/tabler-icons.min.css">
+<script src="./配達記録_files/chart.umd.js.ダウンロード"></script>
 <style>
 :root {
   --bg: #ffffff; --bg2: #f5f5f4; --bg3: #eeede9;
@@ -55,6 +55,10 @@ body { display: flex; flex-direction: column; }
 .plat-inputs input { width: 100%; padding: 9px 10px; border-radius: var(--radius); border: 0.5px solid var(--border); background: var(--bg2); color: var(--text); font-size: 14px; }
 .save-btn { width: 100%; padding: 14px; border-radius: var(--radius-lg); background: var(--text); color: var(--bg); border: none; cursor: pointer; font-size: 15px; font-weight: 600; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .save-btn:active { opacity: .8; }
+/* 既存データ読み込み中のインジケーター */
+.entry-hint { font-size: 11px; color: var(--text2); text-align: center; padding: 4px 0 10px; display: none; }
+.entry-hint.show { display: block; }
+.entry-hint.loaded { color: var(--uber); }
 
 /* Summary */
 .section-title { font-size: 11px; font-weight: 600; color: var(--text2); margin: 16px 0 8px; text-transform: uppercase; letter-spacing: .5px; }
@@ -123,7 +127,7 @@ body { display: flex; flex-direction: column; }
 
 <div class="topbar">
   <span class="topbar-title"><i class="ti ti-motorbike"></i> 配達記録</span>
-  <span class="sync-status" id="sync-status">Firebase同期中</span>
+  <span class="sync-status" id="sync-status">同期完了 ✓</span>
 </div>
 
 <div class="main">
@@ -144,6 +148,7 @@ body { display: flex; flex-direction: column; }
         </select>
       </div>
     </div>
+    <div class="entry-hint show loaded" id="entry-hint">✓ 保存済みのデータを読み込みました（上書き保存できます）</div>
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
       <div class="plat-inputs">
@@ -209,7 +214,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let records = [];
-let expenses = {}; 
+let expenses = {};
 let monthOffset = 0;
 let chart1, chart2;
 const wmap = { sunny:'☀️ 晴れ', cloudy:'⛅ 曇り', rainy:'🌧️ 雨', 'heavy-rain':'⛈️ 大雨', snowy:'❄️ 雪' };
@@ -219,6 +224,30 @@ const inputIds = ['uber-s','uber-c','demae-s','demae-c','rocket-s','rocket-c'];
 function totalOf(r) { return r.uber.sales + r.demae.sales + r.rocket.sales; }
 function countOf(r) { return r.uber.count + r.demae.count + r.rocket.count; }
 
+// ★ 日付に対応するデータを入力欄に反映する
+function loadEntryForDate(date) {
+  const hint = document.getElementById('entry-hint');
+  const existing = records.find(r => r.date === date);
+  if (existing) {
+    // 既存データあり → 入力欄に読み込む
+    document.getElementById('uber-s').value = existing.uber.sales || '';
+    document.getElementById('uber-c').value = existing.uber.count || '';
+    document.getElementById('demae-s').value = existing.demae.sales || '';
+    document.getElementById('demae-c').value = existing.demae.count || '';
+    document.getElementById('rocket-s').value = existing.rocket.sales || '';
+    document.getElementById('rocket-c').value = existing.rocket.count || '';
+    document.getElementById('inp-weather').value = existing.weather || 'sunny';
+    hint.textContent = '✓ 保存済みのデータを読み込みました（上書き保存できます）';
+    hint.className = 'entry-hint show loaded';
+  } else {
+    // データなし → 入力欄をクリア
+    inputIds.forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('inp-weather').value = 'sunny';
+    hint.textContent = '';
+    hint.className = 'entry-hint';
+  }
+}
+
 function listenToDatabase() {
   const colRef = collection(db, "delivery_records");
   onSnapshot(colRef, (snapshot) => {
@@ -227,6 +256,9 @@ function listenToDatabase() {
       records.push({ date: doc.id, ...doc.data() });
     });
     records.sort((a,b) => a.date.localeCompare(b.date));
+    // Firebaseからデータが届いたら、現在表示中の日付で入力欄を再同期
+    const currentDate = document.getElementById('inp-date').value;
+    if (currentDate) loadEntryForDate(currentDate);
     updateViews();
     document.getElementById('sync-status').textContent = "同期完了 ✓";
   }, (error) => {
@@ -240,7 +272,6 @@ function listenToDatabase() {
     snapshot.forEach((doc) => {
       expenses[doc.id] = doc.data().amount || 0;
     });
-    // 入力欄にフォーカスがないときだけ画面全体を更新（入力中のガタつき防止）
     const expInput = document.getElementById('inp-expense');
     if (document.activeElement !== expInput) {
       updateViews();
@@ -251,11 +282,6 @@ function listenToDatabase() {
 function updateViews() {
   if (document.getElementById('page-summary').classList.contains('active')) renderSummary();
   if (document.getElementById('page-list').classList.contains('active')) renderList();
-}
-
-function clearInputs() {
-  inputIds.forEach(id => { document.getElementById(id).value = ''; });
-  document.getElementById('inp-weather').value = 'sunny';
 }
 
 function showPage(p) {
@@ -276,9 +302,10 @@ function changeMonth(d) { monthOffset += d; renderSummary(); }
 function changeDay(offset) {
   const dateInput = document.getElementById('inp-date');
   if (!dateInput.value) return;
-  const current = new Date(dateInput.value);
+  const current = new Date(dateInput.value + 'T00:00:00');
   current.setDate(current.getDate() + offset);
   dateInput.value = current.toISOString().slice(0, 10);
+  loadEntryForDate(dateInput.value);
 }
 
 async function saveExpense(month, amount) {
@@ -292,19 +319,20 @@ async function saveExpense(month, amount) {
 async function saveRecord() {
   const date = document.getElementById('inp-date').value;
   if (!date) { showToast('日付を入力してください'); return; }
-  
   const rec = {
     weather: document.getElementById('inp-weather').value,
     uber: { sales: +document.getElementById('uber-s').value||0, count: +document.getElementById('uber-c').value||0 },
     demae: { sales: +document.getElementById('demae-s').value||0, count: +document.getElementById('demae-c').value||0 },
     rocket: { sales: +document.getElementById('rocket-s').value||0, count: +document.getElementById('rocket-c').value||0 }
   };
-
   try {
     document.getElementById('sync-status').textContent = "保存中...";
     await setDoc(doc(db, "delivery_records", date), rec);
     showToast('クラウドに保存しました ✓');
-    clearInputs();
+    // 保存後はヒントを「保存済み」に更新
+    const hint = document.getElementById('entry-hint');
+    hint.textContent = '✓ 保存済みのデータを読み込みました（上書き保存できます）';
+    hint.className = 'entry-hint show loaded';
   } catch (e) {
     console.error(e);
     showToast('保存に失敗しました');
@@ -312,7 +340,7 @@ async function saveRecord() {
 }
 
 async function deleteRecord(date) {
-  if(confirm(`${date}の記録を削除しますか？`)) {
+  if (confirm(`${date}の記録を削除しますか？`)) {
     try {
       await deleteDoc(doc(db, "delivery_records", date));
       showToast('削除しました');
@@ -330,23 +358,17 @@ function diffHtml(cur, prev, label = "前月比") {
   return `<div class="sdiff neu">→ 0% ${label}</div>`;
 }
 
-function daysInMonth(year, month) {
-  return new Date(year, month, 0).getDate();
-}
+function daysInMonth(year, month) { return new Date(year, month, 0).getDate(); }
 
 function renderSummary() {
   const month = getMonth();
   document.getElementById('month-label').textContent = month.replace('-','年') + '月';
-  
   const f = records.filter(r => r.date.startsWith(month));
   const [y, m] = month.split('-').map(Number);
-  
   const prevM = m===1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
   const lastYearM = `${y-1}-${String(m).padStart(2,'0')}`;
-  
   const pf = records.filter(r => r.date.startsWith(prevM));
   const lyf = records.filter(r => r.date.startsWith(lastYearM));
-  
   const year = month.slice(0,4);
   const yf = records.filter(r => r.date.startsWith(year));
 
@@ -356,7 +378,6 @@ function renderSummary() {
   const prevC = pf.reduce((s,r) => s+countOf(r), 0);
   const lyS = lyf.reduce((s,r) => s+totalOf(r), 0);
   const lyC = lyf.reduce((s,r) => s+countOf(r), 0);
-  
   const yearS = yf.reduce((s,r) => s+totalOf(r), 0);
   const yearC = yf.reduce((s,r) => s+countOf(r), 0);
 
@@ -368,14 +389,10 @@ function renderSummary() {
 
   const totalDaysInMonth = daysInMonth(y, m);
   const today = new Date();
-  let passedDays = totalDaysInMonth; 
-  
-  if (today.toISOString().slice(0,7) === month) {
-    passedDays = today.getDate(); 
-  }
+  let passedDays = totalDaysInMonth;
+  if (today.toISOString().slice(0,7) === month) passedDays = today.getDate();
   const dailyAverage = curS / (passedDays || 1);
   const estimatedPayout = Math.round(dailyAverage * totalDaysInMonth);
-
   const currentExpense = expenses[month] || 0;
   const netProfit = curS - currentExpense;
 
@@ -439,7 +456,6 @@ function renderSummary() {
   }).join('');
 
   const labels = f.map(r => r.date.slice(8)+'日');
-  
   document.getElementById('summary-content').innerHTML = `
     <div class="section-title">収支管理・プラスマイナス</div>
     <div class="stat2" style="margin-bottom: 16px;">
@@ -460,24 +476,17 @@ function renderSummary() {
         <div class="sdiff neu">※1日平均 ¥${Math.round(dailyAverage).toLocaleString()} ペース</div>
       </div>
     </div>
-
     <div class="section-title">月間サマリー</div>
     <div class="stat2">
       <div class="stat-card">
         <div class="slabel">月間売上</div>
         <div class="sval">¥${curS.toLocaleString()}</div>
-        <div class="sdiff">
-          ${diffHtml(curS, prevS, "前月比")}
-          ${diffHtml(curS, lyS, "前年比")}
-        </div>
+        <div class="sdiff">${diffHtml(curS, prevS, "前月比")}${diffHtml(curS, lyS, "前年比")}</div>
       </div>
       <div class="stat-card">
         <div class="slabel">総件数</div>
         <div class="sval">${curC}件</div>
-        <div class="sdiff">
-          ${diffHtml(curC, prevC, "前月比")}
-          ${diffHtml(curC, lyC, "前年比")}
-        </div>
+        <div class="sdiff">${diffHtml(curC, prevC, "前月比")}${diffHtml(curC, lyC, "前年比")}</div>
       </div>
       <div class="stat-card"><div class="slabel">稼働日平均売上</div><div class="sval">¥${avgDaySales.toLocaleString()}</div><div class="sdiff neu">${activeDays.length}日稼働</div></div>
       <div class="stat-card"><div class="slabel">稼働日平均件数</div><div class="sval">${avgActCount}件</div><div class="sdiff neu">単価¥${avgUnit.toLocaleString()}</div></div>
@@ -504,8 +513,6 @@ function renderSummary() {
   `;
 
   const newExpenseInput = document.getElementById('inp-expense');
-  
-  // ★重要修正: 入力中（文字を打っている最中）は画面のリライトを止めて、数値を内部計算して「純利益」だけをリアルタイム書き換えする
   newExpenseInput.addEventListener('input', (e) => {
     const val = Number(e.target.value) || 0;
     const latestNetProfit = curS - val;
@@ -515,11 +522,7 @@ function renderSummary() {
       profitEl.className = latestNetProfit >= 0 ? 'sval up' : 'sval down';
     }
   });
-
-  // ★重要修正: 入力欄から指（フォーカス）が離れたタイミングでFirebaseへ送信し、全体をリライトする
-  newExpenseInput.addEventListener('change', (e) => {
-    saveExpense(month, e.target.value);
-  });
+  newExpenseInput.addEventListener('change', (e) => { saveExpense(month, e.target.value); });
 
   if (chart1) chart1.destroy();
   if (chart2) chart2.destroy();
@@ -565,11 +568,9 @@ function renderList() {
       </div>
     </div>`;
   }).join('');
-
   container.querySelectorAll('.rec-del-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
-      const date = e.currentTarget.getAttribute('data-date');
-      deleteRecord(date);
+      deleteRecord(e.currentTarget.getAttribute('data-date'));
     });
   });
 }
@@ -583,21 +584,25 @@ function showToast(msg) {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('inp-date').value = new Date().toISOString().slice(0,10);
   document.getElementById('list-month').value = new Date().toISOString().slice(0,7);
-  
+
   document.getElementById('btn-save').addEventListener('click', saveRecord);
   document.getElementById('btn-prev-month').addEventListener('click', () => changeMonth(-1));
   document.getElementById('btn-next-month').addEventListener('click', () => changeMonth(1));
   document.getElementById('list-month').addEventListener('change', renderList);
-  
   document.getElementById('btn-prev-day').addEventListener('click', () => changeDay(-1));
   document.getElementById('btn-next-day').addEventListener('click', () => changeDay(1));
-
   document.getElementById('nav-entry').addEventListener('click', () => showPage('entry'));
   document.getElementById('nav-summary').addEventListener('click', () => showPage('summary'));
   document.getElementById('nav-list').addEventListener('click', () => showPage('list'));
 
+  // ★ 日付ピッカーを直接変えたときも対応
+  document.getElementById('inp-date').addEventListener('change', (e) => {
+    loadEntryForDate(e.target.value);
+  });
+
   listenToDatabase();
 });
 </script>
-</body>
-</html>
+
+
+</body></html>
