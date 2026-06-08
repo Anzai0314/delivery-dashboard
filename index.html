@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0059)file:///C:/Users/ahito/Downloads/delivery-tracker-v2_1.html -->
+<!-- saved from url=(0059)file:///C:/Users/ahito/Downloads/delivery-tracker-v2_2.html -->
 <html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -100,24 +100,7 @@ body { display: flex; flex-direction: column; }
 .chart-legend span { display: flex; align-items: center; gap: 4px; }
 .chart-legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
 
-/* List */
-.filter-bar { display: flex; gap: 8px; margin-bottom: 12px; }
-.filter-bar input { flex: 1; padding: 8px 10px; border-radius: var(--radius); border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); font-size: 13px; }
-.record-list { display: flex; flex-direction: column; gap: 8px; }
-.record-card { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 12px; }
-.record-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.record-total { font-size: 14px; font-weight: 700; color: var(--uber); }
-.record-details { display: flex; gap: 6px; flex-wrap: wrap; }
-.rpill { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
-.rpill-uber { background: #d4f5e3; color: #0a5c30; }
-.rpill-demae { background: #fde8d4; color: #8c3a00; }
-.rpill-rocket { background: #fce4ec; color: #880e4f; }
-@media (prefers-color-scheme: dark) {
-  .rpill-uber { background: #0a3d22; color: #5DCAA5; }
-  .rpill-demae { background: #3d2200; color: #EF9F27; }
-  .rpill-rocket { background: #3d0a1e; color: #ED93B1; }
-}
-.rec-del-btn { background: none; border: none; cursor: pointer; color: var(--text2); padding: 4px; font-size: 16px; }
+
 .empty { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 13px; }
 .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; z-index: 100; }
 .toast.show { opacity: 1; }
@@ -148,7 +131,7 @@ body { display: flex; flex-direction: column; }
         </select>
       </div>
     </div>
-    <div class="entry-hint" id="entry-hint"></div>
+    <div class="entry-hint show loaded" id="entry-hint">✓ 保存済みのデータを読み込みました（上書き保存できます）</div>
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
       <div class="plat-inputs">
@@ -182,16 +165,12 @@ body { display: flex; flex-direction: column; }
     <div id="summary-content"></div>
   </div>
 
-  <div id="page-list" class="page">
-    <div class="filter-bar"><input type="month" id="list-month"></div>
-    <div class="record-list" id="record-list"></div>
-  </div>
+
 </div>
 
 <div class="bottom-nav">
   <button class="nav-item active" id="nav-entry"><i class="ti ti-plus"></i>入力</button>
   <button class="nav-item" id="nav-summary"><i class="ti ti-chart-bar"></i>分析</button>
-  <button class="nav-item" id="nav-list"><i class="ti ti-list"></i>履歴</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -281,16 +260,14 @@ function listenToDatabase() {
 
 function updateViews() {
   if (document.getElementById('page-summary').classList.contains('active')) renderSummary();
-  if (document.getElementById('page-list').classList.contains('active')) renderList();
 }
 
 function showPage(p) {
-  ['entry','summary','list'].forEach(n => {
+  ['entry','summary'].forEach(n => {
     document.getElementById('page-'+n).classList.toggle('active', n===p);
     document.getElementById('nav-'+n).classList.toggle('active', n===p);
   });
   if (p === 'summary') renderSummary();
-  if (p === 'list') renderList();
 }
 
 function getMonth() {
@@ -528,52 +505,19 @@ function renderSummary() {
   if (chart1) chart1.destroy();
   if (chart2) chart2.destroy();
   if (!f.length) return;
-  chart1 = new Chart(document.getElementById('chart1'), {type:'bar',data:{labels,datasets:[
-    {label:'Uber',data:f.map(r=>r.uber.sales),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
-    {label:'出前館',data:f.map(r=>r.demae.sales),backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
-    {label:'Rocket',data:f.map(r=>r.rocket.sales),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{callback:v=>`¥${(v/1000).toFixed(0)}k`,font:{size:10}}}}}});
-  chart2 = new Chart(document.getElementById('chart2'), {type:'bar',data:{labels,datasets:[
-    {label:'Uber',data:f.map(r=>r.uber.count),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
-    {label:'出前館',data:f.map(r=>r.demae.count),backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
-    {label:'Rocket',data:f.map(r=>r.rocket.count),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{font:{size:10},stepSize:1}}}}});
-}
-
-function renderList() {
-  const month = document.getElementById('list-month').value;
-  let f = month ? records.filter(r => r.date.startsWith(month)) : [...records];
-  f = f.slice().reverse();
-  const container = document.getElementById('record-list');
-  if (!f.length) { container.innerHTML = '<div class="empty">データがありません</div>'; return; }
-  container.innerHTML = f.map(r => {
-    const total = totalOf(r);
-    const uP = r.uber.count>0 ? Math.round(r.uber.sales/r.uber.count) : 0;
-    const dP = r.demae.count>0 ? Math.round(r.demae.sales/r.demae.count) : 0;
-    const rP = r.rocket.count>0 ? Math.round(r.rocket.sales/r.rocket.count) : 0;
-    return `<div class="record-card">
-      <div class="record-top">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:14px;font-weight:600">${r.date.slice(5).replace('-','/')}</span>
-          <span style="font-size:16px">${wmapS[r.weather]||'☀️'}</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="record-total">¥${total.toLocaleString()}</span>
-          <button class="rec-del-btn" data-date="${r.date}" aria-label="削除"><i class="ti ti-trash"></i></button>
-        </div>
-      </div>
-      <div class="record-details">
-        ${r.uber.count>0?`<span class="rpill rpill-uber">Uber ¥${r.uber.sales.toLocaleString()} / ${r.uber.count}件 / ¥${uP.toLocaleString()}</span>`:''}
-        ${r.demae.count>0?`<span class="rpill rpill-demae">出前館 ¥${r.demae.sales.toLocaleString()} / ${r.demae.count}件 / ¥${dP.toLocaleString()}</span>`:''}
-        ${r.rocket.count>0?`<span class="rpill rpill-rocket">Rocket ¥${r.rocket.sales.toLocaleString()} / ${r.rocket.count}件 / ¥${rP.toLocaleString()}</span>`:''}
-      </div>
-    </div>`;
-  }).join('');
-  container.querySelectorAll('.rec-del-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      deleteRecord(e.currentTarget.getAttribute('data-date'));
-    });
-  });
+  // innerHTML挿入後DOMが確定してからChartを描画
+  setTimeout(() => {
+    chart1 = new Chart(document.getElementById('chart1'), {type:'bar',data:{labels,datasets:[
+      {label:'Uber',data:f.map(r=>r.uber.sales),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
+      {label:'出前館',data:f.map(r=>r.demae.sales),backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
+      {label:'Rocket',data:f.map(r=>r.rocket.sales),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{callback:v=>`¥${(v/1000).toFixed(0)}k`,font:{size:10}}}}}});
+    chart2 = new Chart(document.getElementById('chart2'), {type:'bar',data:{labels,datasets:[
+      {label:'Uber',data:f.map(r=>r.uber.count),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
+      {label:'出前館',data:f.map(r=>r.demae.count),backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
+      {label:'Rocket',data:f.map(r=>r.rocket.count),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{font:{size:10},stepSize:1}}}}});
+  }, 0);
 }
 
 function showToast(msg) {
@@ -584,17 +528,14 @@ function showToast(msg) {
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('inp-date').value = new Date().toISOString().slice(0,10);
-  document.getElementById('list-month').value = new Date().toISOString().slice(0,7);
 
   document.getElementById('btn-save').addEventListener('click', saveRecord);
   document.getElementById('btn-prev-month').addEventListener('click', () => changeMonth(-1));
   document.getElementById('btn-next-month').addEventListener('click', () => changeMonth(1));
-  document.getElementById('list-month').addEventListener('change', renderList);
   document.getElementById('btn-prev-day').addEventListener('click', () => changeDay(-1));
   document.getElementById('btn-next-day').addEventListener('click', () => changeDay(1));
   document.getElementById('nav-entry').addEventListener('click', () => showPage('entry'));
   document.getElementById('nav-summary').addEventListener('click', () => showPage('summary'));
-  document.getElementById('nav-list').addEventListener('click', () => showPage('list'));
 
   // ★ 日付ピッカーを直接変えたときも対応
   document.getElementById('inp-date').addEventListener('change', (e) => {
