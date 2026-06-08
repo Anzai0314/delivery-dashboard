@@ -195,7 +195,6 @@ body { display: flex; flex-direction: column; }
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// あなた専用のFirebase設定情報
 const firebaseConfig = {
   apiKey: "AIzaSyCKZfC6PtJFVEIgNYEy5nIxrtaw68rinRo",
   authDomain: "delivery-2cac6.firebaseapp.com",
@@ -206,7 +205,6 @@ const firebaseConfig = {
   measurementId: "G-6NYFC1MTEG"
 };
 
-// Firebaseの初期化
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -221,7 +219,6 @@ const inputIds = ['uber-s','uber-c','demae-s','demae-c','rocket-s','rocket-c'];
 function totalOf(r) { return r.uber.sales + r.demae.sales + r.rocket.sales; }
 function countOf(r) { return r.uber.count + r.demae.count + r.rocket.count; }
 
-// Firebaseからリアルタイムにデータを取得する処理
 function listenToDatabase() {
   const colRef = collection(db, "delivery_records");
   onSnapshot(colRef, (snapshot) => {
@@ -230,7 +227,6 @@ function listenToDatabase() {
       records.push({ date: doc.id, ...doc.data() });
     });
     records.sort((a,b) => a.date.localeCompare(b.date));
-    
     updateViews();
     document.getElementById('sync-status').textContent = "同期完了 ✓";
   }, (error) => {
@@ -244,7 +240,11 @@ function listenToDatabase() {
     snapshot.forEach((doc) => {
       expenses[doc.id] = doc.data().amount || 0;
     });
-    updateViews();
+    // 入力欄にフォーカスがないときだけ画面全体を更新（入力中のガタつき防止）
+    const expInput = document.getElementById('inp-expense');
+    if (document.activeElement !== expInput) {
+      updateViews();
+    }
   });
 }
 
@@ -379,10 +379,6 @@ function renderSummary() {
   const currentExpense = expenses[month] || 0;
   const netProfit = curS - currentExpense;
 
-  // フォーカス状態のみチェック
-  const expenseInput = document.getElementById('inp-expense');
-  const isExpenseFocused = (document.activeElement === expenseInput);
-
   const weatherStats = {};
   f.forEach(r => {
     const w = r.weather || 'sunny';
@@ -456,7 +452,7 @@ function renderSummary() {
       </div>
       <div class="stat-card" style="background: ${netProfit >= 0 ? 'rgba(6,193,103,0.1)' : 'rgba(233,30,99,0.1)'};">
         <div class="slabel">純利益 (プラスマイナス)</div>
-        <div class="sval ${netProfit >= 0 ? 'up' : 'down'}" style="font-size: 20px;">¥${netProfit.toLocaleString()}</div>
+        <div class="sval ${netProfit >= 0 ? 'up' : 'down'}" style="font-size: 20px;" id="val-netprofit">¥${netProfit.toLocaleString()}</div>
       </div>
       <div class="stat-card">
         <div class="slabel">月末予測報酬 (着地)</div>
@@ -508,14 +504,22 @@ function renderSummary() {
   `;
 
   const newExpenseInput = document.getElementById('inp-expense');
+  
+  // ★重要修正: 入力中（文字を打っている最中）は画面のリライトを止めて、数値を内部計算して「純利益」だけをリアルタイム書き換えする
   newExpenseInput.addEventListener('input', (e) => {
-    saveExpense(month, e.target.value);
+    const val = Number(e.target.value) || 0;
+    const latestNetProfit = curS - val;
+    const profitEl = document.getElementById('val-netprofit');
+    if (profitEl) {
+      profitEl.textContent = `¥${latestNetProfit.toLocaleString()}`;
+      profitEl.className = latestNetProfit >= 0 ? 'sval up' : 'sval down';
+    }
   });
 
-  // フォーカスだけを元に戻す（カーソルの無理な数値指定は廃止してブラウザ標準に任せる）
-  if (isExpenseFocused && newExpenseInput) {
-    newExpenseInput.focus();
-  }
+  // ★重要修正: 入力欄から指（フォーカス）が離れたタイミングでFirebaseへ送信し、全体をリライトする
+  newExpenseInput.addEventListener('change', (e) => {
+    saveExpense(month, e.target.value);
+  });
 
   if (chart1) chart1.destroy();
   if (chart2) chart2.destroy();
