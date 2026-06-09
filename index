@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0059)file:///C:/Users/ahito/Downloads/delivery-tracker-v2_4.html -->
+<html lang="ja"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="配達記録">
 <title>配達記録</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="stylesheet" href="./index_files/tabler-icons.min.css">
+<script src="./index_files/chart.umd.js.ダウンロード"></script>
 <style>
 :root{
   --bg:#ffffff;--bg2:#f5f5f4;--bg3:#eeede9;
@@ -161,7 +161,7 @@ body{display:flex;flex-direction:column}
 
 <div class="topbar">
   <span class="topbar-title"><i class="ti ti-motorbike"></i> 配達記録</span>
-  <span class="sync-status" id="sync-status">接続中...</span>
+  <span class="sync-status" id="sync-status">同期完了 ✓</span>
 </div>
 
 <div class="main">
@@ -170,7 +170,42 @@ body{display:flex;flex-direction:column}
   <div id="page-entry" class="page active">
     <div class="weather-forecast">
       <div class="forecast-title"><i class="ti ti-map-pin"></i>仙台市 7日間の天気予報と売上期待値</div>
-      <div class="forecast-days" id="forecast-days"><div style="font-size:12px;color:var(--text2);padding:8px 0">天気予報を取得中...</div></div>
+      <div class="forecast-days" id="forecast-days"><div class="forecast-day today">
+      <div class="fd-date">06/09(火)</div>
+      <div class="fd-icon">🌧️</div>
+      <div class="fd-temp">16°/24°</div>
+      <div class="fd-expect low">¥8,605</div>
+    </div><div class="forecast-day">
+      <div class="fd-date">06/10(水)</div>
+      <div class="fd-icon">⛅</div>
+      <div class="fd-temp">13°/24°</div>
+      <div class="fd-expect low">¥6,149</div>
+    </div><div class="forecast-day">
+      <div class="fd-date">06/11(木)</div>
+      <div class="fd-icon">⛅</div>
+      <div class="fd-temp">13°/22°</div>
+      <div class="fd-expect low">¥6,149</div>
+    </div><div class="forecast-day">
+      <div class="fd-date">06/12(金)</div>
+      <div class="fd-icon">🌧️</div>
+      <div class="fd-temp">13°/23°</div>
+      <div class="fd-expect low">¥8,605</div>
+    </div><div class="forecast-day">
+      <div class="fd-date">06/13(土)</div>
+      <div class="fd-icon">🌧️</div>
+      <div class="fd-temp">14°/24°</div>
+      <div class="fd-expect low">¥8,605</div>
+    </div><div class="forecast-day">
+      <div class="fd-date">06/14(日)</div>
+      <div class="fd-icon">⛅</div>
+      <div class="fd-temp">15°/24°</div>
+      <div class="fd-expect low">¥6,149</div>
+    </div><div class="forecast-day">
+      <div class="fd-date">06/15(月)</div>
+      <div class="fd-icon">🌧️</div>
+      <div class="fd-temp">16°/23°</div>
+      <div class="fd-expect low">¥8,605</div>
+    </div></div>
     </div>
     <div class="date-weather-row">
       <div class="date-input-wrap">
@@ -188,15 +223,15 @@ body{display:flex;flex-direction:column}
         </select>
       </div>
     </div>
-    <div class="entry-hint" id="entry-hint"></div>
+    <div class="entry-hint show loaded" id="entry-hint">✓ 保存済みデータを読み込みました（上書き保存できます）</div>
     <div class="daily-total-banner">
       <div>
         <div class="dtb-label">本日の合計報酬</div>
-        <div class="dtb-amount zero" id="dtb-amount">¥0</div>
+        <div class="dtb-amount" id="dtb-amount">¥626</div>
       </div>
       <div class="dtb-right">
-        <div class="dtb-sub" id="dtb-count">0件</div>
-        <div class="dtb-sub" id="dtb-unit">単価 --</div>
+        <div class="dtb-sub" id="dtb-count">1件</div>
+        <div class="dtb-sub" id="dtb-unit">単価 ¥626</div>
         <div class="dtb-sub" id="dtb-hourly" style="color:var(--uber)"></div>
       </div>
     </div>
@@ -238,22 +273,292 @@ body{display:flex;flex-direction:column}
   <div id="page-summary" class="page">
     <div class="month-bar">
       <button id="btn-prev-month"><i class="ti ti-chevron-left"></i></button>
-      <span id="month-label"></span>
+      <span id="month-label">2026年06月</span>
       <button id="btn-next-month"><i class="ti ti-chevron-right"></i></button>
     </div>
-    <div id="summary-content"></div>
+    <div id="summary-content">
+    <!-- 目標 -->
+    <div class="section-title">月間目標</div>
+    <div class="goal-section">
+      <div class="goal-header">
+        <span>2026年06月の目標</span>
+        <span class="goal-pct" id="goal-pct-disp">未設定</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px">目標金額を設定してください</div>
+      <div class="goal-input-row">
+        <label>目標額</label>
+        <input type="number" id="inp-goal" value="" placeholder="200000" inputmode="numeric">
+      </div>
+    </div>
+    <!-- 収支 -->
+    <div class="section-title">収支管理</div>
+    <div class="stat2" style="margin-bottom:16px">
+      <div class="stat-card stat-card-full">
+        <div class="slabel">今月の経費</div>
+        <div class="expense-input-box"><span>¥</span>
+          <input type="number" id="inp-expense" value="119940" placeholder="0" inputmode="numeric">
+        </div>
+      </div>
+      <div class="stat-card" style="background:rgba(233,30,99,0.1)">
+        <div class="slabel">純利益</div>
+        <div class="sval down" id="val-netprofit">¥-74,412</div>
+      </div>
+      <div class="stat-card">
+        <div class="slabel">月末予測報酬</div>
+        <div class="sval" style="color:#BA7517">¥151,760</div>
+        <div class="sdiff neu">日平均¥5,059ペース</div>
+      </div>
+    </div>
+    <!-- サマリー -->
+    <div class="section-title">月間サマリー</div>
+    <div class="stat2">
+      <div class="stat-card">
+        <div class="slabel">月間売上</div><div class="sval">¥45,528</div>
+        <div class="sdiff"><div class="sdiff down">▼ 75% 前月比</div><div class="sdiff down">▼ 52% 前年比</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="slabel">総件数</div><div class="sval">63件</div>
+        <div class="sdiff"><div class="sdiff down">▼ 76% 前月比</div><div class="sdiff neu">--% 前年比</div></div>
+      </div>
+      <div class="stat-card"><div class="slabel">稼働日平均売上</div><div class="sval">¥7,588</div><div class="sdiff neu">6日稼働</div></div>
+      <div class="stat-card"><div class="slabel">稼働日平均件数</div><div class="sval">10.5件</div><div class="sdiff neu">単価¥723</div></div>
+      
+      <div class="stat-card"><div class="slabel">連続稼働</div><div class="sval">1日</div><div class="sdiff neu">現在の連続記録</div></div>
+    </div>
+    <div class="year-banner">
+      <div><div class="yl">2026年 累計売上</div><div class="yv">¥944,200</div></div>
+      <div style="text-align:right"><div class="yl">累計件数</div><div style="font-size:16px;font-weight:600">1262件</div></div>
+    </div>
+    <!-- プラットフォーム別 -->
+    <div class="section-title">プラットフォーム別</div><div class="plat-row">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="plat-dot" style="background:#06C167"></div>
+        <div><div style="font-size:13px;font-weight:600">Uber Eats</div>
+        <div style="font-size:11px;color:var(--text2)">36件 / 単価¥763</div></div>
+      </div>
+      <div style="text-align:right"><div style="font-size:14px;font-weight:600">¥27,479</div>
+      <div style="font-size:11px;color:var(--text2)">60%</div></div>
+    </div>
+    <div class="bar-wrap"><div class="bar-fill" style="width:60%;background:#06C167"></div></div><div class="plat-row">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="plat-dot" style="background:#FF6B00"></div>
+        <div><div style="font-size:13px;font-weight:600">出前館</div>
+        <div style="font-size:11px;color:var(--text2)">26件 / 単価¥677</div></div>
+      </div>
+      <div style="text-align:right"><div style="font-size:14px;font-weight:600">¥17,614</div>
+      <div style="font-size:11px;color:var(--text2)">39%</div></div>
+    </div>
+    <div class="bar-wrap"><div class="bar-fill" style="width:39%;background:#FF6B00"></div></div><div class="plat-row">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="plat-dot" style="background:#E91E63"></div>
+        <div><div style="font-size:13px;font-weight:600">Rocket Now</div>
+        <div style="font-size:11px;color:var(--text2)">1件 / 単価¥435</div></div>
+      </div>
+      <div style="text-align:right"><div style="font-size:14px;font-weight:600">¥435</div>
+      <div style="font-size:11px;color:var(--text2)">1%</div></div>
+    </div>
+    <div class="bar-wrap"><div class="bar-fill" style="width:1%;background:#E91E63"></div></div>
+    <!-- 天気別 -->
+    <div class="section-title">天気別 平均日売上</div>
+    <div class="weather-grid"><div class="weather-card">
+      <div class="wicon">☀️</div>
+      <div class="wname">晴れ</div>
+      <div class="wval">¥21,655<span style="font-size:11px;font-weight:400">/日</span></div>
+      <div class="wsub">1日稼働 / 平均25件</div>
+    </div><div class="weather-card">
+      <div class="wicon">⛅</div>
+      <div class="wname">曇り</div>
+      <div class="wval">¥4,632<span style="font-size:11px;font-weight:400">/日</span></div>
+      <div class="wsub">4日稼働 / 平均7.5件</div>
+    </div><div class="weather-card">
+      <div class="wicon">🌧️</div>
+      <div class="wname">雨</div>
+      <div class="wval">¥5,344<span style="font-size:11px;font-weight:400">/日</span></div>
+      <div class="wsub">1日稼働 / 平均8件</div>
+    </div></div>
+    <!-- 曜日別（全期間） -->
+    <div class="section-title">曜日別 平均売上（全期間）</div>
+    <div class="dow-grid"><div class="dow-card">
+      <div class="dc-day" style="color:#E91E63">日</div>
+      <div class="bar-wrap" style="height:4px;margin:4px 0"><div class="bar-fill" style="width:100%;background:var(--uber)"></div></div>
+      <div class="dc-val" style="color:var(--uber)">¥1.8万</div>
+      <div class="dc-cnt">23日</div>
+    </div><div class="dow-card">
+      <div class="dc-day" style="color:var(--text)">月</div>
+      <div class="bar-wrap" style="height:4px;margin:4px 0"><div class="bar-fill" style="width:61%;background:#BA7517"></div></div>
+      <div class="dc-val" style="color:#BA7517">¥1.1万</div>
+      <div class="dc-cnt">14日</div>
+    </div><div class="dow-card">
+      <div class="dc-day" style="color:var(--text)">火</div>
+      <div class="bar-wrap" style="height:4px;margin:4px 0"><div class="bar-fill" style="width:68%;background:#BA7517"></div></div>
+      <div class="dc-val" style="color:#BA7517">¥1.2万</div>
+      <div class="dc-cnt">23日</div>
+    </div><div class="dow-card">
+      <div class="dc-day" style="color:var(--text)">水</div>
+      <div class="bar-wrap" style="height:4px;margin:4px 0"><div class="bar-fill" style="width:94%;background:var(--uber)"></div></div>
+      <div class="dc-val" style="color:var(--uber)">¥1.7万</div>
+      <div class="dc-cnt">22日</div>
+    </div><div class="dow-card">
+      <div class="dc-day" style="color:var(--text)">木</div>
+      <div class="bar-wrap" style="height:4px;margin:4px 0"><div class="bar-fill" style="width:46%;background:var(--text3)"></div></div>
+      <div class="dc-val" style="color:var(--text3)">¥8,113</div>
+      <div class="dc-cnt">19日</div>
+    </div><div class="dow-card">
+      <div class="dc-day" style="color:var(--text)">金</div>
+      <div class="bar-wrap" style="height:4px;margin:4px 0"><div class="bar-fill" style="width:64%;background:#BA7517"></div></div>
+      <div class="dc-val" style="color:#BA7517">¥1.1万</div>
+      <div class="dc-cnt">21日</div>
+    </div><div class="dow-card">
+      <div class="dc-day" style="color:#4A90D9">土</div>
+      <div class="bar-wrap" style="height:4px;margin:4px 0"><div class="bar-fill" style="width:92%;background:var(--uber)"></div></div>
+      <div class="dc-val" style="color:var(--uber)">¥1.6万</div>
+      <div class="dc-cnt">21日</div>
+    </div></div>
+    <!-- ランキング -->
+    <div class="section-title">高収入ベスト5</div>
+    <div class="rank-list"><div class="rank-item">
+      <div class="rank-num gold">1</div>
+      <div class="rank-info">
+        <div class="rank-date">06/07 ☀️ 日曜</div>
+        <div class="rank-detail">25件 / 単価¥866 / U:¥17,162 出:¥4,493</div>
+        
+      </div>
+      <div class="rank-amt">¥21,655</div>
+    </div><div class="rank-item">
+      <div class="rank-num silver">2</div>
+      <div class="rank-info">
+        <div class="rank-date">06/05 ⛅ 金曜</div>
+        <div class="rank-detail">17件 / 単価¥695 / U:¥8,932 出:¥2,456 R:¥435</div>
+        
+      </div>
+      <div class="rank-amt">¥11,823</div>
+    </div><div class="rank-item">
+      <div class="rank-num bronze">3</div>
+      <div class="rank-info">
+        <div class="rank-date">06/04 ⛅ 木曜</div>
+        <div class="rank-detail">10件 / 単価¥543 / U:¥320 出:¥5,112</div>
+        
+      </div>
+      <div class="rank-amt">¥5,432</div>
+    </div><div class="rank-item">
+      <div class="rank-num ">4</div>
+      <div class="rank-info">
+        <div class="rank-date">06/06 🌧️ 土曜</div>
+        <div class="rank-detail">8件 / 単価¥668 / U:¥417 出:¥4,927</div>
+        
+      </div>
+      <div class="rank-amt">¥5,344</div>
+    </div><div class="rank-item">
+      <div class="rank-num ">5</div>
+      <div class="rank-info">
+        <div class="rank-date">06/02 ⛅ 火曜</div>
+        <div class="rank-detail">2件 / 単価¥324 / U:¥648</div>
+        
+      </div>
+      <div class="rank-amt">¥648</div>
+    </div></div>
+    <!-- グラフ -->
+    <div class="section-title">日別売上</div>
+    <div class="chart-legend">
+      <span><i style="background:#06C167"></i>Uber Eats</span>
+      <span><i style="background:#FF6B00"></i>出前館</span>
+      <span><i style="background:#E91E63"></i>Rocket Now</span>
+    </div>
+    <div style="position:relative;width:100%;height:180px"><canvas id="chart1" width="1873" height="180" style="display: block; box-sizing: border-box; height: 180px; width: 1873px;"></canvas></div>
+    <div class="section-title" style="margin-top:14px">日別配達件数</div>
+    <div style="position:relative;width:100%;height:140px"><canvas id="chart2" width="1873" height="140" style="display: block; box-sizing: border-box; height: 140px; width: 1873px;"></canvas></div>
+    <div class="section-title" style="margin-top:14px">プラットフォーム別 月次推移（直近6ヶ月）</div>
+    <div style="position:relative;width:100%;height:160px"><canvas id="chart3" width="1873" height="160" style="display: block; box-sizing: border-box; height: 160px; width: 1873px;"></canvas></div>
+  </div>
   </div>
 
   <!-- ③ 年間ページ -->
   <div id="page-year" class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <span style="font-size:15px;font-weight:600" id="year-label"></span>
+      <span style="font-size:15px;font-weight:600" id="year-label">2026年 年間レポート</span>
       <div style="display:flex;gap:8px">
         <button class="date-btn" id="btn-prev-year"><i class="ti ti-chevron-left"></i></button>
         <button class="date-btn" id="btn-next-year"><i class="ti ti-chevron-right"></i></button>
       </div>
     </div>
-    <div id="year-content"></div>
+    <div id="year-content">
+    <div class="stat2">
+      <div class="stat-card stat-card-full">
+        <div class="slabel">2026年 年間総売上</div>
+        <div class="sval" style="font-size:26px">¥944,200</div>
+        <div class="sdiff"><div class="sdiff down">▼ 4% 前年比</div></div>
+      </div>
+      <div class="stat-card"><div class="slabel">年間総件数</div><div class="sval">1262件</div></div>
+      <div class="stat-card"><div class="slabel">稼働日数</div><div class="sval">131日</div></div>
+      
+      <div class="stat-card"><div class="slabel">1日平均売上</div><div class="sval">¥7,208</div></div>
+    </div>
+    <div class="section-title">月別売上</div>
+    <div style="position:relative;width:100%;height:160px;margin-bottom:12px"><canvas id="chart-year" width="1873" height="160" style="display: block; box-sizing: border-box; height: 160px; width: 1873px;"></canvas></div>
+    <div class="month-row">
+      <div class="mr-left">
+        <div class="mr-month">2026年01月</div>
+        <div class="mr-days">25日稼働 / 134件</div>
+        <div class="bar-wrap" style="width:100%;margin-top:4px"><div class="bar-fill" style="width:50%;background:var(--uber)"></div></div>
+      </div>
+      <div class="mr-right">
+        <div class="mr-sales">¥120,707</div>
+        <div class="mr-diff"><span class="down">▼3%</span></div>
+      </div>
+    </div><div class="month-row">
+      <div class="mr-left">
+        <div class="mr-month">2026年02月</div>
+        <div class="mr-days">20日稼働 / 170件</div>
+        <div class="bar-wrap" style="width:100%;margin-top:4px"><div class="bar-fill" style="width:55%;background:var(--uber)"></div></div>
+      </div>
+      <div class="mr-right">
+        <div class="mr-sales">¥132,199</div>
+        <div class="mr-diff"><span class="up">▲10%</span></div>
+      </div>
+    </div><div class="month-row">
+      <div class="mr-left">
+        <div class="mr-month">2026年03月</div>
+        <div class="mr-days">27日稼働 / 341件</div>
+        <div class="bar-wrap" style="width:100%;margin-top:4px"><div class="bar-fill" style="width:100%;background:var(--uber)"></div></div>
+      </div>
+      <div class="mr-right">
+        <div class="mr-sales">¥241,081</div>
+        <div class="mr-diff"><span class="up">▲82%</span></div>
+      </div>
+    </div><div class="month-row">
+      <div class="mr-left">
+        <div class="mr-month">2026年04月</div>
+        <div class="mr-days">26日稼働 / 295件</div>
+        <div class="bar-wrap" style="width:100%;margin-top:4px"><div class="bar-fill" style="width:92%;background:var(--uber)"></div></div>
+      </div>
+      <div class="mr-right">
+        <div class="mr-sales">¥222,147</div>
+        <div class="mr-diff"><span class="down">▼8%</span></div>
+      </div>
+    </div><div class="month-row">
+      <div class="mr-left">
+        <div class="mr-month">2026年05月</div>
+        <div class="mr-days">27日稼働 / 259件</div>
+        <div class="bar-wrap" style="width:100%;margin-top:4px"><div class="bar-fill" style="width:76%;background:var(--uber)"></div></div>
+      </div>
+      <div class="mr-right">
+        <div class="mr-sales">¥182,538</div>
+        <div class="mr-diff"><span class="down">▼18%</span></div>
+      </div>
+    </div><div class="month-row">
+      <div class="mr-left">
+        <div class="mr-month">2026年06月</div>
+        <div class="mr-days">6日稼働 / 63件</div>
+        <div class="bar-wrap" style="width:100%;margin-top:4px"><div class="bar-fill" style="width:19%;background:var(--uber)"></div></div>
+      </div>
+      <div class="mr-right">
+        <div class="mr-sales">¥45,528</div>
+        <div class="mr-diff"><span class="down">▼75%</span></div>
+      </div>
+    </div>
+    <div class="section-title">CSVエクスポート</div>
+    <button class="csv-btn" id="btn-csv"><i class="ti ti-file-spreadsheet"></i> 2026年のデータをCSVでダウンロード</button>
+  </div>
   </div>
 
 </div>
@@ -863,14 +1168,6 @@ function renderYear(){
   }));
 }
 
-function diffHtml(cur,prev,label){
-  if(!prev) return `<div class="sdiff neu">--% ${label}</div>`;
-  const p=Math.round((cur-prev)/prev*100);
-  if(p>0) return `<div class="sdiff up">▲ ${p}% ${label}</div>`;
-  if(p<0) return `<div class="sdiff down">▼ ${Math.abs(p)}% ${label}</div>`;
-  return `<div class="sdiff neu">→ 0% ${label}</div>`;
-}
-
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
@@ -896,5 +1193,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   listenToDatabase();
 });
 </script>
-</body>
-</html>
+
+
+</body></html>
