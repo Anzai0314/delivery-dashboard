@@ -47,6 +47,24 @@ body{display:flex;flex-direction:column}
 .forecast-day .fd-expect{font-size:10px;font-weight:600;margin-top:3px}
 .fd-expect.high{color:var(--uber)}.fd-expect.mid{color:#BA7517}.fd-expect.low{color:var(--text2)}
 
+/* 出発・帰宅ボタン */
+.session-block{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px;margin-bottom:10px;background:var(--bg2)}
+.session-title{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.session-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.btn-depart{padding:14px;border-radius:var(--radius-lg);border:none;cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--uber);color:#fff}
+.btn-depart:active{opacity:.8}
+.btn-return{padding:14px;border-radius:var(--radius-lg);border:none;cursor:pointer;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;background:var(--bg3);color:var(--text);border:0.5px solid var(--border2)}
+.btn-return:active{opacity:.8}
+.btn-return.active-session{background:var(--demae);color:#fff;border:none}
+.session-list{display:flex;flex-direction:column;gap:5px}
+.session-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--radius);padding:7px 10px;font-size:12px}
+.session-row .sr-time{color:var(--text2)}
+.session-row .sr-dur{font-weight:600;color:var(--uber)}
+.session-row .sr-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 4px}
+.total-hours-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)}
+.total-hours-row .th-label{font-size:11px;color:var(--text2)}
+.total-hours-row .th-val{font-size:14px;font-weight:700;color:var(--uber)}
+
 /* Entry */
 .date-weather-row{display:grid;grid-template-columns:1.4fr 1fr;gap:10px;margin-bottom:14px}
 .date-input-wrap{display:flex;align-items:flex-end;gap:4px}
@@ -61,13 +79,9 @@ body{display:flex;flex-direction:column}
 .plat-inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .plat-inputs label{font-size:11px;color:var(--text2);display:block;margin-bottom:3px}
 .plat-inputs input{width:100%;padding:9px 10px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px}
-.plat-inputs input.wide{grid-column:span 2}
 .note-row{margin-top:8px}
 .note-row label{font-size:11px;color:var(--text2);display:block;margin-bottom:3px}
 .note-row textarea{width:100%;padding:8px 10px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;resize:none;height:60px;font-family:inherit}
-.time-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-.time-row label{font-size:11px;color:var(--text2);display:block;margin-bottom:3px}
-.time-row input{width:100%;padding:9px 10px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px}
 .save-btn{width:100%;padding:14px;border-radius:var(--radius-lg);background:var(--text);color:var(--bg);border:none;cursor:pointer;font-size:15px;font-weight:600;margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px}
 .save-btn:active{opacity:.8}
 .entry-hint{font-size:11px;color:var(--text2);text-align:center;padding:4px 0 10px;display:none}
@@ -81,6 +95,12 @@ body{display:flex;flex-direction:column}
 .dtb-amount.zero{color:var(--text3)}
 .dtb-right{text-align:right}
 .dtb-sub{font-size:12px;color:var(--text2);margin-top:3px}
+/* 先月同日比較 */
+.lastmonth-bar{border-radius:var(--radius);padding:10px 12px;margin-bottom:14px;background:var(--bg2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.lmb-label{font-size:11px;color:var(--text2)}
+.lmb-vals{display:flex;align-items:center;gap:8px}
+.lmb-prev{font-size:13px;color:var(--text2)}
+.lmb-diff{font-size:13px;font-weight:700}
 
 /* Summary */
 .section-title{font-size:11px;font-weight:600;color:var(--text2);margin:16px 0 8px;text-transform:uppercase;letter-spacing:.5px}
@@ -88,7 +108,7 @@ body{display:flex;flex-direction:column}
 .month-bar button{background:none;border:0.5px solid var(--border2);border-radius:var(--radius);padding:7px 14px;cursor:pointer;color:var(--text);font-size:13px}
 .month-bar span{font-size:15px;font-weight:600}
 .stat2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
-.stat-card{background:var(--bg2);border-radius:var(--radius);padding:12px;position:relative;overflow:hidden}
+.stat-card{background:var(--bg2);border-radius:var(--radius);padding:12px}
 .stat-card .slabel{font-size:11px;color:var(--text2);margin-bottom:4px}
 .stat-card .sval{font-size:18px;font-weight:600}
 .stat-card .sdiff{font-size:11px;margin-top:3px;display:flex;flex-direction:column;gap:1px}
@@ -99,7 +119,6 @@ body{display:flex;flex-direction:column}
 .year-banner{background:var(--bg2);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
 .year-banner .yl{font-size:11px;color:var(--text2);margin-bottom:2px}
 .year-banner .yv{font-size:22px;font-weight:600}
-/* 目標バー */
 .goal-section{background:var(--bg2);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px}
 .goal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .goal-header span{font-size:13px;font-weight:600}
@@ -111,11 +130,9 @@ body{display:flex;flex-direction:column}
 .goal-input-row{display:flex;align-items:center;gap:8px;margin-top:10px}
 .goal-input-row label{font-size:11px;color:var(--text2);white-space:nowrap}
 .goal-input-row input{flex:1;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);font-size:14px}
-/* プラットフォーム */
 .plat-row{border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .bar-wrap{height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin:-2px 0 6px}
 .bar-fill{height:100%;border-radius:3px}
-/* 天気別・曜日別 */
 .weather-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .weather-card{border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px}
 .weather-card .wicon{font-size:20px;margin-bottom:3px}
@@ -127,7 +144,6 @@ body{display:flex;flex-direction:column}
 .dow-card .dc-day{font-size:11px;font-weight:600;margin-bottom:3px}
 .dow-card .dc-val{font-size:11px;font-weight:700}
 .dow-card .dc-cnt{font-size:10px;color:var(--text2);margin-top:1px}
-/* ランキング */
 .rank-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
 .rank-item{display:flex;align-items:center;gap:10px;border:0.5px solid var(--border);border-radius:var(--radius);padding:10px 12px}
 .rank-num{font-size:15px;font-weight:700;min-width:22px;color:var(--text2)}
@@ -136,22 +152,44 @@ body{display:flex;flex-direction:column}
 .rank-date{font-size:13px;font-weight:600}
 .rank-detail{font-size:11px;color:var(--text2);margin-top:2px}
 .rank-amt{font-size:15px;font-weight:700;color:var(--uber)}
-/* グラフ */
 .chart-legend{display:flex;gap:12px;margin-bottom:8px;font-size:11px;color:var(--text2);flex-wrap:wrap}
 .chart-legend span{display:flex;align-items:center;gap:4px}
 .chart-legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
-/* 年間ページ */
-.year-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+
+/* 年間 */
 .csv-btn{width:100%;padding:12px;border-radius:var(--radius-lg);background:var(--bg2);color:var(--text);border:0.5px solid var(--border2);cursor:pointer;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px}
 .csv-btn:active{opacity:.7}
-.month-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:6px;cursor:pointer}
-.month-row:active{background:var(--bg2)}
+.month-row{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:6px}
 .mr-left .mr-month{font-size:13px;font-weight:600}
 .mr-left .mr-days{font-size:11px;color:var(--text2)}
 .mr-right{text-align:right}
 .mr-right .mr-sales{font-size:14px;font-weight:600}
 .mr-right .mr-diff{font-size:11px}
-/* 共通 */
+
+/* カレンダー */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.cal-nav button{background:none;border:0.5px solid var(--border2);border-radius:var(--radius);padding:7px 14px;cursor:pointer;color:var(--text);font-size:13px}
+.cal-nav span{font-size:15px;font-weight:600}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:12px}
+.cal-dow{text-align:center;font-size:10px;font-weight:600;color:var(--text2);padding:4px 0}
+.cal-cell{border-radius:var(--radius);padding:5px 3px;min-height:52px;cursor:pointer;border:0.5px solid transparent;display:flex;flex-direction:column;align-items:center;gap:1px}
+.cal-cell:active{background:var(--bg3)}
+.cal-cell.other-month{opacity:.3}
+.cal-cell.today{border-color:var(--uber)}
+.cal-cell.has-data{background:var(--bg2)}
+.cal-cell.selected{border-color:var(--text);background:var(--bg3)}
+.cal-date{font-size:12px;font-weight:600}
+.cal-date.sun{color:#E91E63}.cal-date.sat{color:#4A90D9}
+.cal-sales{font-size:9px;font-weight:700;color:var(--uber);line-height:1.2;text-align:center}
+.cal-detail{margin-top:10px;border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px;display:none}
+.cal-detail.show{display:block}
+.cal-detail-title{font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.cal-summary-bar{background:var(--bg2);border-radius:var(--radius);margin-bottom:12px}
+.cal-month-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px}
+.cal-month-stat{background:var(--bg2);border-radius:var(--radius);padding:10px;text-align:center}
+.cms-label{font-size:10px;color:var(--text2);margin-bottom:3px}
+.cms-val{font-size:14px;font-weight:700}
+
 .empty{text-align:center;padding:3rem 1rem;color:var(--text2);font-size:13px}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1}
@@ -189,6 +227,8 @@ body{display:flex;flex-direction:column}
       </div>
     </div>
     <div class="entry-hint" id="entry-hint"></div>
+
+    <!-- 合計報酬バナー -->
     <div class="daily-total-banner">
       <div>
         <div class="dtb-label">本日の合計報酬</div>
@@ -200,6 +240,33 @@ body{display:flex;flex-direction:column}
         <div class="dtb-sub" id="dtb-hourly" style="color:var(--uber)"></div>
       </div>
     </div>
+
+    <!-- 先月同日比較 -->
+    <div class="lastmonth-bar" id="lastmonth-bar" style="display:none">
+      <div class="lmb-label">先月同日</div>
+      <div class="lmb-vals">
+        <span class="lmb-prev" id="lmb-prev">--</span>
+        <span class="lmb-diff" id="lmb-diff"></span>
+      </div>
+    </div>
+
+    <!-- 出発・帰宅ボタン -->
+    <div class="session-block">
+      <div class="session-title">
+        <span><i class="ti ti-clock"></i> 稼働セッション</span>
+        <span class="th-val" id="total-hours-disp"></span>
+      </div>
+      <div class="session-btns">
+        <button class="btn-depart" id="btn-depart"><i class="ti ti-rocket"></i> 出発</button>
+        <button class="btn-return" id="btn-return"><i class="ti ti-home"></i> 帰宅</button>
+      </div>
+      <div class="session-list" id="session-list"></div>
+      <div class="total-hours-row" id="total-hours-row" style="display:none">
+        <span class="th-label">本日の稼働合計</span>
+        <span class="th-val" id="total-hours-val"></span>
+      </div>
+    </div>
+
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
       <div class="plat-inputs">
@@ -220,12 +287,6 @@ body{display:flex;flex-direction:column}
         <div><label>売上 (円)</label><input type="number" id="rocket-s" placeholder="0" inputmode="numeric"></div>
         <div><label>配達件数</label><input type="number" id="rocket-c" placeholder="0" inputmode="numeric"></div>
       </div>
-      <!-- 稼働時間 -->
-      <div class="time-row" style="margin-top:10px">
-        <div><label>稼働開始</label><input type="time" id="inp-start"></div>
-        <div><label>稼働終了</label><input type="time" id="inp-end"></div>
-      </div>
-      <!-- メモ -->
       <div class="note-row">
         <label>メモ（イベント・特記事項など）</label>
         <textarea id="inp-note" placeholder="例：雨天・花火大会・渋滞あり"></textarea>
@@ -244,7 +305,19 @@ body{display:flex;flex-direction:column}
     <div id="summary-content"></div>
   </div>
 
-  <!-- ③ 年間ページ -->
+  <!-- ③ カレンダーページ -->
+  <div id="page-cal" class="page">
+    <div class="cal-nav">
+      <button id="btn-cal-prev"><i class="ti ti-chevron-left"></i></button>
+      <span id="cal-label"></span>
+      <button id="btn-cal-next"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <div class="cal-month-stats" id="cal-month-stats"></div>
+    <div class="cal-grid" id="cal-grid"></div>
+    <div class="cal-detail" id="cal-detail"></div>
+  </div>
+
+  <!-- ④ 年間ページ -->
   <div id="page-year" class="page">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <span style="font-size:15px;font-weight:600" id="year-label"></span>
@@ -261,6 +334,7 @@ body{display:flex;flex-direction:column}
 <div class="bottom-nav">
   <button class="nav-item active" id="nav-entry"><i class="ti ti-plus"></i>入力</button>
   <button class="nav-item" id="nav-summary"><i class="ti ti-chart-bar"></i>分析</button>
+  <button class="nav-item" id="nav-cal"><i class="ti ti-calendar"></i>カレンダー</button>
   <button class="nav-item" id="nav-year"><i class="ti ti-calendar-stats"></i>年間</button>
 </div>
 
@@ -283,10 +357,16 @@ const db  = getFirestore(app);
 
 let records  = [];
 let expenses = {};
-let goals    = {};        // { "2025-06": 200000, ... }
+let goals    = {};
 let monthOffset = 0;
+let calOffset   = 0;
 let yearOffset  = 0;
 let chartInstances = {};
+
+// セッション管理（当日のメモリ上）
+// sessions = [ {depart:"HH:MM", return:"HH:MM"|null}, ... ]
+let sessions = [];
+let sessionDate = '';
 
 const wmap  = { sunny:'☀️ 晴れ', cloudy:'⛅ 曇り', rainy:'🌧️ 雨', 'heavy-rain':'⛈️ 大雨', snowy:'❄️ 雪' };
 const wmapS = { sunny:'☀️', cloudy:'⛅', rainy:'🌧️', 'heavy-rain':'⛈️', snowy:'❄️' };
@@ -296,13 +376,39 @@ const inputIds = ['uber-s','uber-c','demae-s','demae-c','rocket-s','rocket-c'];
 // ── ユーティリティ ─────────────────────────────
 function totalOf(r){ return r.uber.sales+r.demae.sales+r.rocket.sales; }
 function countOf(r){ return r.uber.count+r.demae.count+r.rocket.count; }
-function hoursOf(r){
-  if(!r.start||!r.end) return 0;
-  const [sh,sm]=r.start.split(':').map(Number);
-  const [eh,em]=r.end.split(':').map(Number);
-  const mins = (eh*60+em)-(sh*60+sm);
-  return mins>0 ? mins/60 : 0;
+
+function sessionsToHours(sess){
+  let mins=0;
+  sess.forEach(s=>{
+    if(!s.depart||!s.return) return;
+    const[dh,dm]=s.depart.split(':').map(Number);
+    const[rh,rm]=s.return.split(':').map(Number);
+    const diff=(rh*60+rm)-(dh*60+dm);
+    if(diff>0) mins+=diff;
+  });
+  return mins/60;
 }
+
+function hoursOf(r){
+  if(r.sessions && r.sessions.length) return sessionsToHours(r.sessions);
+  if(!r.start||!r.end) return 0;
+  const[sh,sm]=r.start.split(':').map(Number);
+  const[eh,em]=r.end.split(':').map(Number);
+  const m=(eh*60+em)-(sh*60+sm);
+  return m>0?m/60:0;
+}
+
+function fmtHours(h){
+  if(!h) return '';
+  const hh=Math.floor(h), mm=Math.round((h-hh)*60);
+  return mm>0?`${hh}h${mm}m`:`${hh}h`;
+}
+
+function nowTime(){
+  const d=new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
 function todayStr(){
   const d=new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -311,9 +417,11 @@ function getMonthStr(){
   const d=new Date(); d.setMonth(d.getMonth()+monthOffset);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
-function getYearStr(){
-  return String(new Date().getFullYear()+yearOffset);
+function getCalMonthStr(){
+  const d=new Date(); d.setMonth(d.getMonth()+calOffset);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
+function getYearStr(){ return String(new Date().getFullYear()+yearOffset); }
 
 // ── グラフ ────────────────────────────────────
 function drawChart(id,type,data,options){
@@ -322,7 +430,7 @@ function drawChart(id,type,data,options){
   chartInstances[id]=new Chart(el,{type,data,options});
 }
 
-// ── 天気予報 (Open-Meteo 仙台) ────────────────
+// ── 天気予報 ──────────────────────────────────
 const WMO={0:'sunny',1:'sunny',2:'cloudy',3:'cloudy',45:'cloudy',48:'cloudy',51:'rainy',53:'rainy',55:'rainy',61:'rainy',63:'rainy',65:'heavy-rain',71:'snowy',73:'snowy',75:'snowy',77:'snowy',80:'rainy',81:'rainy',82:'heavy-rain',85:'snowy',86:'snowy',95:'heavy-rain',96:'heavy-rain',99:'heavy-rain'};
 
 async function fetchForecast(){
@@ -333,7 +441,6 @@ async function fetchForecast(){
     document.getElementById('forecast-days').innerHTML='<div style="font-size:12px;color:var(--text2);padding:4px 0">取得失敗</div>';
   }
 }
-
 function calcExpected(wkey){
   const hits=records.filter(r=>(r.weather||'sunny')===wkey&&totalOf(r)>0);
   if(hits.length>=2) return Math.round(hits.reduce((s,r)=>s+totalOf(r),0)/hits.length);
@@ -343,7 +450,6 @@ function calcExpected(wkey){
   const ratio={sunny:0.9,cloudy:1.0,rainy:1.2,'heavy-rain':1.35,snowy:1.1};
   return Math.round(base*(ratio[wkey]||1));
 }
-
 function renderForecast(daily){
   const today=todayStr();
   document.getElementById('forecast-days').innerHTML=daily.time.map((date,i)=>{
@@ -361,7 +467,80 @@ function renderForecast(daily){
   }).join('');
 }
 
-// ── 入力欄：合計リアルタイム更新 ──────────────
+// ── セッション管理 ────────────────────────────
+function loadSessions(date){
+  sessionDate=date;
+  const ex=records.find(r=>r.date===date);
+  sessions = ex && ex.sessions ? JSON.parse(JSON.stringify(ex.sessions)) : [];
+  renderSessions();
+}
+
+function renderSessions(){
+  const list=document.getElementById('session-list');
+  const totalRow=document.getElementById('total-hours-row');
+  const returnBtn=document.getElementById('btn-return');
+
+  // 稼働中（最後のセッションにreturnがない）かどうか
+  const inSession=sessions.length>0 && !sessions[sessions.length-1].return;
+  returnBtn.className=inSession?'btn-return active-session':'btn-return';
+
+  if(!sessions.length){ list.innerHTML=''; totalRow.style.display='none'; updateTotalHoursDisp(); return; }
+
+  list.innerHTML=sessions.map((s,i)=>{
+    const dur=s.return?fmtHours(sessionsToHours([s])):'稼働中...';
+    const retStr=s.return||'--:--';
+    return `<div class="session-row">
+      <span class="sr-time">${s.depart} → ${retStr}</span>
+      <span class="sr-dur">${dur}</span>
+      <button class="sr-del" data-i="${i}"><i class="ti ti-x"></i></button>
+    </div>`;
+  }).join('');
+
+  list.querySelectorAll('.sr-del').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      const i=+e.currentTarget.dataset.i;
+      sessions.splice(i,1);
+      renderSessions();
+      updateDailyTotal();
+    });
+  });
+
+  const totalH=sessionsToHours(sessions);
+  if(totalH>0){
+    totalRow.style.display='flex';
+    document.getElementById('total-hours-val').textContent=fmtHours(totalH);
+  } else {
+    totalRow.style.display='none';
+  }
+  updateTotalHoursDisp();
+}
+
+function updateTotalHoursDisp(){
+  const h=sessionsToHours(sessions);
+  document.getElementById('total-hours-disp').textContent=h>0?fmtHours(h):'';
+}
+
+function onDepart(){
+  const date=document.getElementById('inp-date').value;
+  if(date!==sessionDate) loadSessions(date);
+  const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
+  if(inSession){ showToast('帰宅を先に記録してください'); return; }
+  sessions.push({depart:nowTime(),return:null});
+  renderSessions();
+  updateDailyTotal();
+}
+
+function onReturn(){
+  const date=document.getElementById('inp-date').value;
+  if(date!==sessionDate) loadSessions(date);
+  const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
+  if(!inSession){ showToast('出発を先に記録してください'); return; }
+  sessions[sessions.length-1].return=nowTime();
+  renderSessions();
+  updateDailyTotal();
+}
+
+// ── 合計バナー更新 ────────────────────────────
 function updateDailyTotal(){
   const us=+document.getElementById('uber-s').value||0;
   const uc=+document.getElementById('uber-c').value||0;
@@ -371,19 +550,38 @@ function updateDailyTotal(){
   const rc=+document.getElementById('rocket-c').value||0;
   const total=us+ds+rs, count=uc+dc+rc;
   const unit=count>0?Math.round(total/count):0;
-  const st=document.getElementById('inp-start').value;
-  const en=document.getElementById('inp-end').value;
-  let hrs=0;
-  if(st&&en){const[sh,sm]=st.split(':').map(Number);const[eh,em]=en.split(':').map(Number);const m=(eh*60+em)-(sh*60+sm);hrs=m>0?m/60:0;}
+  const hrs=sessionsToHours(sessions);
   const amtEl=document.getElementById('dtb-amount');
   amtEl.textContent=`¥${total.toLocaleString()}`;
   amtEl.className=total>0?'dtb-amount':'dtb-amount zero';
   document.getElementById('dtb-count').textContent=`${count}件`;
   document.getElementById('dtb-unit').textContent=count>0?`単価 ¥${unit.toLocaleString()}`:'単価 --';
-  document.getElementById('dtb-hourly').textContent=hrs>0?`時給 ¥${Math.round(total/hrs).toLocaleString()}`:'';
+  document.getElementById('dtb-hourly').textContent=hrs>0&&total>0?`時給 ¥${Math.round(total/hrs).toLocaleString()}`:'';
+  updateLastMonthBar(total);
 }
 
-// ── 日付連動：既存データ読み込み ──────────────
+// ── 先月同日比較 ──────────────────────────────
+function updateLastMonthBar(todayTotal){
+  const date=document.getElementById('inp-date').value;
+  if(!date) return;
+  const [y,m,d]=date.split('-').map(Number);
+  const pm=m===1?12:m-1, py=m===1?y-1:y;
+  const prevDate=`${py}-${String(pm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const prevRec=records.find(r=>r.date===prevDate);
+  const bar=document.getElementById('lastmonth-bar');
+  if(!prevRec){ bar.style.display='none'; return; }
+  const prevTotal=totalOf(prevRec);
+  bar.style.display='flex';
+  document.getElementById('lmb-prev').textContent=`¥${prevTotal.toLocaleString()}`;
+  const diff=todayTotal-prevTotal;
+  const pct=prevTotal>0?Math.round(diff/prevTotal*100):0;
+  const diffEl=document.getElementById('lmb-diff');
+  if(diff>0){ diffEl.textContent=`▲¥${diff.toLocaleString()} (+${pct}%)`; diffEl.className='lmb-diff up'; }
+  else if(diff<0){ diffEl.textContent=`▼¥${Math.abs(diff).toLocaleString()} (${pct}%)`; diffEl.className='lmb-diff down'; }
+  else { diffEl.textContent='同額'; diffEl.className='lmb-diff neu'; }
+}
+
+// ── 既存データ読み込み ─────────────────────────
 function loadEntryForDate(date){
   const hint=document.getElementById('entry-hint');
   const ex=records.find(r=>r.date===date);
@@ -395,30 +593,27 @@ function loadEntryForDate(date){
     document.getElementById('rocket-s').value=ex.rocket.sales||'';
     document.getElementById('rocket-c').value=ex.rocket.count||'';
     document.getElementById('inp-weather').value=ex.weather||'sunny';
-    document.getElementById('inp-start').value=ex.start||'';
-    document.getElementById('inp-end').value=ex.end||'';
     document.getElementById('inp-note').value=ex.note||'';
     hint.textContent='✓ 保存済みデータを読み込みました（上書き保存できます）';
     hint.className='entry-hint show loaded';
   }else{
     inputIds.forEach(id=>document.getElementById(id).value='');
     document.getElementById('inp-weather').value='sunny';
-    document.getElementById('inp-start').value='';
-    document.getElementById('inp-end').value='';
     document.getElementById('inp-note').value='';
     hint.textContent=''; hint.className='entry-hint';
   }
+  loadSessions(date);
   updateDailyTotal();
 }
 
-// ── Firebase リスナー ─────────────────────────
+// ── Firebase ──────────────────────────────────
 function listenToDatabase(){
   onSnapshot(collection(db,'delivery_records'),snap=>{
     records=[];
     snap.forEach(d=>records.push({date:d.id,...d.data()}));
     records.sort((a,b)=>a.date.localeCompare(b.date));
     const cur=document.getElementById('inp-date').value;
-    if(cur) loadEntryForDate(cur);
+    if(cur){ loadEntryForDate(cur); }
     fetchForecast();
     updateViews();
     document.getElementById('sync-status').textContent='同期完了 ✓';
@@ -440,16 +635,18 @@ function listenToDatabase(){
 
 function updateViews(){
   if(document.getElementById('page-summary').classList.contains('active')) renderSummary();
+  if(document.getElementById('page-cal').classList.contains('active')) renderCal();
   if(document.getElementById('page-year').classList.contains('active')) renderYear();
 }
 
 // ── ページ切替 ────────────────────────────────
 function showPage(p){
-  ['entry','summary','year'].forEach(n=>{
+  ['entry','summary','cal','year'].forEach(n=>{
     document.getElementById('page-'+n).classList.toggle('active',n===p);
     document.getElementById('nav-'+n).classList.toggle('active',n===p);
   });
   if(p==='summary') renderSummary();
+  if(p==='cal')     renderCal();
   if(p==='year')    renderYear();
 }
 
@@ -457,7 +654,7 @@ function showPage(p){
 function changeDay(offset){
   const inp=document.getElementById('inp-date');
   if(!inp.value) return;
-  const [y,m,d]=inp.value.split('-').map(Number);
+  const[y,m,d]=inp.value.split('-').map(Number);
   const nd=new Date(y,m-1,d+offset);
   inp.value=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
   loadEntryForDate(inp.value);
@@ -469,50 +666,42 @@ async function saveRecord(){
   if(!date){showToast('日付を入力してください');return;}
   const rec={
     weather:document.getElementById('inp-weather').value,
-    uber:  {sales:+document.getElementById('uber-s').value||0, count:+document.getElementById('uber-c').value||0},
+    uber:  {sales:+document.getElementById('uber-s').value||0,count:+document.getElementById('uber-c').value||0},
     demae: {sales:+document.getElementById('demae-s').value||0,count:+document.getElementById('demae-c').value||0},
     rocket:{sales:+document.getElementById('rocket-s').value||0,count:+document.getElementById('rocket-c').value||0},
-    start: document.getElementById('inp-start').value||'',
-    end:   document.getElementById('inp-end').value||'',
-    note:  document.getElementById('inp-note').value||''
+    sessions: sessions.filter(s=>s.depart&&s.return),
+    note: document.getElementById('inp-note').value||''
   };
   try{
     document.getElementById('sync-status').textContent='保存中...';
     await setDoc(doc(db,'delivery_records',date),rec);
     showToast('保存しました ✓');
-    const h=document.getElementById('entry-hint');
-    h.textContent='✓ 保存済みデータを読み込みました（上書き保存できます）';
-    h.className='entry-hint show loaded';
+    document.getElementById('entry-hint').textContent='✓ 保存済みデータを読み込みました（上書き保存できます）';
+    document.getElementById('entry-hint').className='entry-hint show loaded';
     updateDailyTotal();
   }catch(e){showToast('保存に失敗しました');}
 }
 
-async function saveExpense(month,amount){
-  try{await setDoc(doc(db,'monthly_expenses',month),{amount:Number(amount)||0});}catch(e){}
-}
-async function saveGoal(month,amount){
-  try{await setDoc(doc(db,'monthly_goals',month),{amount:Number(amount)||0});}catch(e){}
-}
+async function saveExpense(month,amount){try{await setDoc(doc(db,'monthly_expenses',month),{amount:Number(amount)||0});}catch(e){}}
+async function saveGoal(month,amount){try{await setDoc(doc(db,'monthly_goals',month),{amount:Number(amount)||0});}catch(e){}}
 
-// ── CSV エクスポート ───────────────────────────
+// ── CSV ───────────────────────────────────────
 function exportCSV(year){
   const yf=records.filter(r=>r.date.startsWith(year));
   if(!yf.length){showToast('データがありません');return;}
   const header='日付,天候,Uber売上,Uber件数,出前館売上,出前館件数,Rocket売上,Rocket件数,合計売上,合計件数,稼働時間(h),時給,メモ';
   const rows=yf.map(r=>{
     const t=totalOf(r),c=countOf(r),h=hoursOf(r);
-    const hw=h>0?Math.round(t/h):'';
-    return [r.date,wmap[r.weather]||'',r.uber.sales,r.uber.count,r.demae.sales,r.demae.count,r.rocket.sales,r.rocket.count,t,c,h?h.toFixed(2):'',hw,`"${(r.note||'').replace(/"/g,'""')}"`].join(',');
+    return [r.date,wmap[r.weather]||'',r.uber.sales,r.uber.count,r.demae.sales,r.demae.count,r.rocket.sales,r.rocket.count,t,c,h?h.toFixed(2):'',h>0?Math.round(t/h):'',`"${(r.note||'').replace(/"/g,'""')}"`].join(',');
   });
   const csv='\uFEFF'+header+'\n'+rows.join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.download=`配達記録_${year}.csv`;
-  a.click();
+  a.download=`配達記録_${year}.csv`; a.click();
   showToast('CSVをダウンロードしました');
 }
 
-// ── 分析ページ ────────────────────────────────
+// ── diffHtml ──────────────────────────────────
 function diffHtml(cur,prev,label){
   if(!prev) return `<div class="sdiff neu">--% ${label}</div>`;
   const p=Math.round((cur-prev)/prev*100);
@@ -521,48 +710,39 @@ function diffHtml(cur,prev,label){
   return `<div class="sdiff neu">→ 0% ${label}</div>`;
 }
 
+// ── 分析ページ ────────────────────────────────
 function renderSummary(){
   const month=getMonthStr();
   document.getElementById('month-label').textContent=month.replace('-','年')+'月';
   const f=records.filter(r=>r.date.startsWith(month));
-  const [y,m]=month.split('-').map(Number);
+  const[y,m]=month.split('-').map(Number);
   const prevM=m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`;
   const lyM=`${y-1}-${String(m).padStart(2,'0')}`;
   const pf=records.filter(r=>r.date.startsWith(prevM));
   const lyf=records.filter(r=>r.date.startsWith(lyM));
   const yf=records.filter(r=>r.date.startsWith(String(y)));
 
-  const curS=f.reduce((s,r)=>s+totalOf(r),0);
-  const curC=f.reduce((s,r)=>s+countOf(r),0);
-  const prevS=pf.reduce((s,r)=>s+totalOf(r),0);
-  const prevC=pf.reduce((s,r)=>s+countOf(r),0);
-  const lyS=lyf.reduce((s,r)=>s+totalOf(r),0);
-  const lyC=lyf.reduce((s,r)=>s+countOf(r),0);
-  const yearS=yf.reduce((s,r)=>s+totalOf(r),0);
-  const yearC=yf.reduce((s,r)=>s+countOf(r),0);
+  const curS=f.reduce((s,r)=>s+totalOf(r),0), curC=f.reduce((s,r)=>s+countOf(r),0);
+  const prevS=pf.reduce((s,r)=>s+totalOf(r),0), prevC=pf.reduce((s,r)=>s+countOf(r),0);
+  const lyS=lyf.reduce((s,r)=>s+totalOf(r),0), lyC=lyf.reduce((s,r)=>s+countOf(r),0);
+  const yearS=yf.reduce((s,r)=>s+totalOf(r),0), yearC=yf.reduce((s,r)=>s+countOf(r),0);
 
   const active=f.filter(r=>totalOf(r)>0);
   const avgDaySales=active.length?Math.round(curS/active.length):0;
   const avgActCount=active.length?Math.round(active.reduce((s,r)=>s+countOf(r),0)/active.length*10)/10:0;
   const avgUnit=curC?Math.round(curS/curC):0;
-  // 時給
   const hoursAll=f.reduce((s,r)=>s+hoursOf(r),0);
   const avgHourly=hoursAll>0?Math.round(curS/hoursAll):0;
-  // 目標
   const goalAmt=goals[month]||0;
   const goalPct=goalAmt>0?Math.min(Math.round(curS/goalAmt*100),999):0;
-  // 月末予測
   const totalDays=new Date(y,m,0).getDate();
   const today2=new Date();
   const passed=today2.toISOString().slice(0,7)===month?today2.getDate():totalDays;
   const dailyAvg=curS/(passed||1);
   const estPayout=Math.round(dailyAvg*totalDays);
-  // 収支
   const curExp=expenses[month]||0;
   const netProfit=curS-curExp;
-  // 連続稼働日数
   let streak=0;
-  const t=todayStr();
   for(let i=0;;i++){
     const d=new Date(); d.setDate(d.getDate()-i);
     const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -570,174 +750,78 @@ function renderSummary(){
     else break;
   }
 
-  // 天気別
   const wStats={};
-  f.forEach(r=>{
-    const w=r.weather||'sunny';
-    if(!wStats[w]) wStats[w]={sales:0,count:0,days:0};
-    wStats[w].sales+=totalOf(r); wStats[w].count+=countOf(r);
-    if(totalOf(r)>0) wStats[w].days++;
-  });
-  // 曜日別（全期間）
+  f.forEach(r=>{const w=r.weather||'sunny';if(!wStats[w])wStats[w]={sales:0,count:0,days:0};wStats[w].sales+=totalOf(r);wStats[w].count+=countOf(r);if(totalOf(r)>0)wStats[w].days++;});
   const dowStats=Array(7).fill(null).map(()=>({sales:0,count:0,days:0}));
-  records.filter(r=>totalOf(r)>0).forEach(r=>{
-    const dow=new Date(r.date+'T00:00:00').getDay();
-    dowStats[dow].sales+=totalOf(r); dowStats[dow].count+=countOf(r); dowStats[dow].days++;
-  });
+  records.filter(r=>totalOf(r)>0).forEach(r=>{const dow=new Date(r.date+'T00:00:00').getDay();dowStats[dow].sales+=totalOf(r);dowStats[dow].count+=countOf(r);dowStats[dow].days++;});
   const maxDowSales=Math.max(...dowStats.map(d=>d.days?Math.round(d.sales/d.days):0),1);
-
-  // プラットフォーム別 月次推移（直近6ヶ月）
   const recentMonths=[];
-  for(let i=5;i>=0;i--){
-    const d=new Date(y,m-1-i,1);
-    recentMonths.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
-  }
-
-  // top5
+  for(let i=5;i>=0;i--){const d=new Date(y,m-1-i,1);recentMonths.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);}
   const top5=[...f].sort((a,b)=>totalOf(b)-totalOf(a)).slice(0,5);
   const plats=[{k:'uber',n:'Uber Eats',c:'#06C167'},{k:'demae',n:'出前館',c:'#FF6B00'},{k:'rocket',n:'Rocket Now',c:'#E91E63'}];
+
   const platRows=plats.map(p=>{
-    const s=f.reduce((a,r)=>a+r[p.k].sales,0);
-    const c=f.reduce((a,r)=>a+r[p.k].count,0);
-    const u=c?Math.round(s/c):0;
-    const pct=curS?Math.round(s/curS*100):0;
-    return `<div class="plat-row">
-      <div style="display:flex;align-items:center;gap:8px">
-        <div class="plat-dot" style="background:${p.c}"></div>
-        <div><div style="font-size:13px;font-weight:600">${p.n}</div>
-        <div style="font-size:11px;color:var(--text2)">${c}件 / 単価¥${u.toLocaleString()}</div></div>
-      </div>
-      <div style="text-align:right"><div style="font-size:14px;font-weight:600">¥${s.toLocaleString()}</div>
-      <div style="font-size:11px;color:var(--text2)">${pct}%</div></div>
-    </div>
-    <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${p.c}"></div></div>`;
+    const s=f.reduce((a,r)=>a+r[p.k].sales,0),c=f.reduce((a,r)=>a+r[p.k].count,0);
+    const u=c?Math.round(s/c):0,pct=curS?Math.round(s/curS*100):0;
+    return `<div class="plat-row"><div style="display:flex;align-items:center;gap:8px"><div class="plat-dot" style="background:${p.c}"></div><div><div style="font-size:13px;font-weight:600">${p.n}</div><div style="font-size:11px;color:var(--text2)">${c}件 / 単価¥${u.toLocaleString()}</div></div></div><div style="text-align:right"><div style="font-size:14px;font-weight:600">¥${s.toLocaleString()}</div><div style="font-size:11px;color:var(--text2)">${pct}%</div></div></div><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${p.c}"></div></div>`;
   }).join('');
 
   const wCards=['sunny','cloudy','rainy','heavy-rain','snowy'].filter(w=>wStats[w]).map(w=>{
-    const ws=wStats[w];
-    const avgS=ws.days?Math.round(ws.sales/ws.days):0;
-    const avgC=ws.days?Math.round(ws.count/ws.days*10)/10:0;
-    return `<div class="weather-card">
-      <div class="wicon">${wmapS[w]}</div>
-      <div class="wname">${wmap[w].split(' ')[1]}</div>
-      <div class="wval">¥${avgS.toLocaleString()}<span style="font-size:11px;font-weight:400">/日</span></div>
-      <div class="wsub">${ws.days}日稼働 / 平均${avgC}件</div>
-    </div>`;
+    const ws=wStats[w];const avgS=ws.days?Math.round(ws.sales/ws.days):0;const avgC=ws.days?Math.round(ws.count/ws.days*10)/10:0;
+    return `<div class="weather-card"><div class="wicon">${wmapS[w]}</div><div class="wname">${wmap[w].split(' ')[1]}</div><div class="wval">¥${avgS.toLocaleString()}<span style="font-size:11px;font-weight:400">/日</span></div><div class="wsub">${ws.days}日稼働 / 平均${avgC}件</div></div>`;
   }).join('');
 
   const dowCards=DAYS.map((d,i)=>{
-    const ds=dowStats[i];
-    const avgS=ds.days?Math.round(ds.sales/ds.days):0;
+    const ds=dowStats[i];const avgS=ds.days?Math.round(ds.sales/ds.days):0;
     const barH=Math.round(avgS/maxDowSales*100);
     const color=avgS>=15000?'var(--uber)':avgS>=10000?'#BA7517':'var(--text3)';
-    return `<div class="dow-card">
-      <div class="dc-day" style="color:${i===0?'#E91E63':i===6?'#4A90D9':'var(--text)'}">${d}</div>
-      <div class="bar-wrap" style="height:4px;margin:4px 0"><div class="bar-fill" style="width:${barH}%;background:${color}"></div></div>
-      <div class="dc-val" style="color:${color}">${avgS?'¥'+(avgS>=10000?(avgS/10000).toFixed(1)+'万':avgS.toLocaleString()):'--'}</div>
-      <div class="dc-cnt">${ds.days?ds.days+'日':'--'}</div>
-    </div>`;
+    return `<div class="dow-card"><div class="dc-day" style="color:${i===0?'#E91E63':i===6?'#4A90D9':'var(--text)'}">${d}</div><div class="bar-wrap" style="height:4px;margin:4px 0"><div class="bar-fill" style="width:${barH}%;background:${color}"></div></div><div class="dc-val" style="color:${color}">${avgS?'¥'+(avgS>=10000?(avgS/10000).toFixed(1)+'万':avgS.toLocaleString()):'--'}</div><div class="dc-cnt">${ds.days?ds.days+'日':'--'}</div></div>`;
   }).join('');
 
   const rc=['gold','silver','bronze','',''];
   const rankItems=top5.map((r,i)=>{
-    const t=totalOf(r),c=countOf(r),u=c?Math.round(t/c):0;
-    const h=hoursOf(r);
+    const t=totalOf(r),c=countOf(r),u=c?Math.round(t/c):0,h=hoursOf(r);
     const hw=h>0?` / 時給¥${Math.round(t/h).toLocaleString()}`:'';
     const pts=[];
     if(r.uber.sales>0) pts.push(`U:¥${r.uber.sales.toLocaleString()}`);
     if(r.demae.sales>0) pts.push(`出:¥${r.demae.sales.toLocaleString()}`);
     if(r.rocket.sales>0) pts.push(`R:¥${r.rocket.sales.toLocaleString()}`);
-    const noteStr=r.note?`<div style="font-size:10px;color:var(--text2);margin-top:2px">📝 ${r.note}</div>`:'';
-    return `<div class="rank-item">
-      <div class="rank-num ${rc[i]}">${i+1}</div>
-      <div class="rank-info">
-        <div class="rank-date">${r.date.slice(5).replace('-','/')} ${wmapS[r.weather]||'☀️'} ${DAYS[new Date(r.date+'T00:00:00').getDay()]}曜</div>
-        <div class="rank-detail">${c}件 / 単価¥${u.toLocaleString()}${hw} / ${pts.join(' ')}</div>
-        ${noteStr}
-      </div>
-      <div class="rank-amt">¥${t.toLocaleString()}</div>
-    </div>`;
+    return `<div class="rank-item"><div class="rank-num ${rc[i]}">${i+1}</div><div class="rank-info"><div class="rank-date">${r.date.slice(5).replace('-','/')} ${wmapS[r.weather]||'☀️'} ${DAYS[new Date(r.date+'T00:00:00').getDay()]}曜</div><div class="rank-detail">${c}件 / 単価¥${u.toLocaleString()}${hw} / ${pts.join(' ')}</div>${r.note?`<div style="font-size:10px;color:var(--text2);margin-top:2px">📝 ${r.note}</div>`:''}</div><div class="rank-amt">¥${t.toLocaleString()}</div></div>`;
   }).join('');
 
   const labels=f.map(r=>r.date.slice(8)+'日');
-  const rmLabels=recentMonths.map(m=>m.slice(5)+'月');
-
   document.getElementById('summary-content').innerHTML=`
-    <!-- 目標 -->
     <div class="section-title">月間目標</div>
     <div class="goal-section">
-      <div class="goal-header">
-        <span>${month.replace('-','年')}月の目標</span>
-        <span class="goal-pct" id="goal-pct-disp">${goalAmt?goalPct+'%':'未設定'}</span>
-      </div>
-      ${goalAmt?`
-      <div class="goal-bar-bg"><div class="goal-bar-fill${goalPct>=100?' over':''}" style="width:${Math.min(goalPct,100)}%" id="goal-bar"></div></div>
-      <div class="goal-sub">
-        <span>¥${curS.toLocaleString()} / ¥${goalAmt.toLocaleString()}</span>
-        <span>残り¥${Math.max(goalAmt-curS,0).toLocaleString()}</span>
-      </div>`:'<div style="font-size:12px;color:var(--text2);margin-bottom:8px">目標金額を設定してください</div>'}
-      <div class="goal-input-row">
-        <label>目標額</label>
-        <input type="number" id="inp-goal" value="${goalAmt||''}" placeholder="200000" inputmode="numeric">
-      </div>
+      <div class="goal-header"><span>${month.replace('-','年')}月の目標</span><span class="goal-pct">${goalAmt?goalPct+'%':'未設定'}</span></div>
+      ${goalAmt?`<div class="goal-bar-bg"><div class="goal-bar-fill${goalPct>=100?' over':''}" style="width:${Math.min(goalPct,100)}%"></div></div><div class="goal-sub"><span>¥${curS.toLocaleString()} / ¥${goalAmt.toLocaleString()}</span><span>残り¥${Math.max(goalAmt-curS,0).toLocaleString()}</span></div>`:'<div style="font-size:12px;color:var(--text2);margin-bottom:8px">目標金額を設定してください</div>'}
+      <div class="goal-input-row"><label>目標額</label><input type="number" id="inp-goal" value="${goalAmt||''}" placeholder="200000" inputmode="numeric"></div>
     </div>
-    <!-- 収支 -->
     <div class="section-title">収支管理</div>
     <div class="stat2" style="margin-bottom:16px">
-      <div class="stat-card stat-card-full">
-        <div class="slabel">今月の経費</div>
-        <div class="expense-input-box"><span>¥</span>
-          <input type="number" id="inp-expense" value="${curExp||''}" placeholder="0" inputmode="numeric">
-        </div>
-      </div>
-      <div class="stat-card" style="background:${netProfit>=0?'rgba(6,193,103,0.1)':'rgba(233,30,99,0.1)'}">
-        <div class="slabel">純利益</div>
-        <div class="sval ${netProfit>=0?'up':'down'}" id="val-netprofit">¥${netProfit.toLocaleString()}</div>
-      </div>
-      <div class="stat-card">
-        <div class="slabel">月末予測報酬</div>
-        <div class="sval" style="color:#BA7517">¥${estPayout.toLocaleString()}</div>
-        <div class="sdiff neu">日平均¥${Math.round(dailyAvg).toLocaleString()}ペース</div>
-      </div>
+      <div class="stat-card stat-card-full"><div class="slabel">今月の経費</div><div class="expense-input-box"><span>¥</span><input type="number" id="inp-expense" value="${curExp||''}" placeholder="0" inputmode="numeric"></div></div>
+      <div class="stat-card" style="background:${netProfit>=0?'rgba(6,193,103,0.1)':'rgba(233,30,99,0.1)'}"><div class="slabel">純利益</div><div class="sval ${netProfit>=0?'up':'down'}" id="val-netprofit">¥${netProfit.toLocaleString()}</div></div>
+      <div class="stat-card"><div class="slabel">月末予測報酬</div><div class="sval" style="color:#BA7517">¥${estPayout.toLocaleString()}</div><div class="sdiff neu">日平均¥${Math.round(dailyAvg).toLocaleString()}ペース</div></div>
     </div>
-    <!-- サマリー -->
     <div class="section-title">月間サマリー</div>
     <div class="stat2">
-      <div class="stat-card">
-        <div class="slabel">月間売上</div><div class="sval">¥${curS.toLocaleString()}</div>
-        <div class="sdiff">${diffHtml(curS,prevS,'前月比')}${diffHtml(curS,lyS,'前年比')}</div>
-      </div>
-      <div class="stat-card">
-        <div class="slabel">総件数</div><div class="sval">${curC}件</div>
-        <div class="sdiff">${diffHtml(curC,prevC,'前月比')}${diffHtml(curC,lyC,'前年比')}</div>
-      </div>
+      <div class="stat-card"><div class="slabel">月間売上</div><div class="sval">¥${curS.toLocaleString()}</div><div class="sdiff">${diffHtml(curS,prevS,'前月比')}${diffHtml(curS,lyS,'前年比')}</div></div>
+      <div class="stat-card"><div class="slabel">総件数</div><div class="sval">${curC}件</div><div class="sdiff">${diffHtml(curC,prevC,'前月比')}${diffHtml(curC,lyC,'前年比')}</div></div>
       <div class="stat-card"><div class="slabel">稼働日平均売上</div><div class="sval">¥${avgDaySales.toLocaleString()}</div><div class="sdiff neu">${active.length}日稼働</div></div>
       <div class="stat-card"><div class="slabel">稼働日平均件数</div><div class="sval">${avgActCount}件</div><div class="sdiff neu">単価¥${avgUnit.toLocaleString()}</div></div>
       ${avgHourly?`<div class="stat-card"><div class="slabel">平均時給</div><div class="sval up">¥${avgHourly.toLocaleString()}</div><div class="sdiff neu">計${hoursAll.toFixed(1)}h稼働</div></div>`:''}
       <div class="stat-card"><div class="slabel">連続稼働</div><div class="sval">${streak}日</div><div class="sdiff neu">現在の連続記録</div></div>
     </div>
-    <div class="year-banner">
-      <div><div class="yl">${y}年 累計売上</div><div class="yv">¥${yearS.toLocaleString()}</div></div>
-      <div style="text-align:right"><div class="yl">累計件数</div><div style="font-size:16px;font-weight:600">${yearC}件</div></div>
-    </div>
-    <!-- プラットフォーム別 -->
+    <div class="year-banner"><div><div class="yl">${y}年 累計売上</div><div class="yv">¥${yearS.toLocaleString()}</div></div><div style="text-align:right"><div class="yl">累計件数</div><div style="font-size:16px;font-weight:600">${yearC}件</div></div></div>
     <div class="section-title">プラットフォーム別</div>${platRows}
-    <!-- 天気別 -->
     <div class="section-title">天気別 平均日売上</div>
     <div class="weather-grid">${wCards||'<div style="font-size:13px;color:var(--text2)">データがありません</div>'}</div>
-    <!-- 曜日別（全期間） -->
     <div class="section-title">曜日別 平均売上（全期間）</div>
     <div class="dow-grid">${dowCards}</div>
-    <!-- ランキング -->
     <div class="section-title">高収入ベスト5</div>
     <div class="rank-list">${rankItems||'<div class="empty">データがありません</div>'}</div>
-    <!-- グラフ -->
     <div class="section-title">日別売上</div>
-    <div class="chart-legend">
-      <span><i style="background:#06C167"></i>Uber Eats</span>
-      <span><i style="background:#FF6B00"></i>出前館</span>
-      <span><i style="background:#E91E63"></i>Rocket Now</span>
-    </div>
+    <div class="chart-legend"><span><i style="background:#06C167"></i>Uber Eats</span><span><i style="background:#FF6B00"></i>出前館</span><span><i style="background:#E91E63"></i>Rocket Now</span></div>
     <div style="position:relative;width:100%;height:180px"><canvas id="chart1"></canvas></div>
     <div class="section-title" style="margin-top:14px">日別配達件数</div>
     <div style="position:relative;width:100%;height:140px"><canvas id="chart2"></canvas></div>
@@ -745,47 +829,113 @@ function renderSummary(){
     <div style="position:relative;width:100%;height:160px"><canvas id="chart3"></canvas></div>
   `;
 
-  // 目標・経費イベント
   document.getElementById('inp-goal').addEventListener('change',e=>saveGoal(month,e.target.value));
   const ei=document.getElementById('inp-expense');
-  ei.addEventListener('input',e=>{
-    const v=Number(e.target.value)||0, n=curS-v;
-    const el=document.getElementById('val-netprofit');
-    if(el){el.textContent=`¥${n.toLocaleString()}`;el.className=n>=0?'sval up':'sval down';}
-  });
+  ei.addEventListener('input',e=>{const v=Number(e.target.value)||0,n=curS-v;const el=document.getElementById('val-netprofit');if(el){el.textContent=`¥${n.toLocaleString()}`;el.className=n>=0?'sval up':'sval down';}});
   ei.addEventListener('change',e=>saveExpense(month,e.target.value));
 
   if(!f.length) return;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    drawChart('chart1','bar',
-      {labels,datasets:[
-        {label:'Uber',  data:f.map(r=>r.uber.sales),  backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
-        {label:'出前館',data:f.map(r=>r.demae.sales), backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
-        {label:'Rocket',data:f.map(r=>r.rocket.sales),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
-      ]},
-      {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},
-       scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{callback:v=>`¥${(v/1000).toFixed(0)}k`,font:{size:10}}}}}
-    );
-    drawChart('chart2','bar',
-      {labels,datasets:[
-        {label:'Uber',  data:f.map(r=>r.uber.count),  backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
-        {label:'出前館',data:f.map(r=>r.demae.count), backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
-        {label:'Rocket',data:f.map(r=>r.rocket.count),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
-      ]},
-      {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-       scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{font:{size:10},stepSize:1}}}}
-    );
-    drawChart('chart3','line',
-      {labels:rmLabels,datasets:plats.map(p=>({
-        label:p.n,
-        data:recentMonths.map(mo=>records.filter(r=>r.date.startsWith(mo)).reduce((s,r)=>s+r[p.k].sales,0)),
-        borderColor:p.c,backgroundColor:p.c+'33',fill:false,tension:.3,pointRadius:3
-      }))},
-      {responsive:true,maintainAspectRatio:false,
-       plugins:{legend:{labels:{font:{size:10},boxWidth:10}}},
-       scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>`¥${(v/1000).toFixed(0)}k`,font:{size:10}}}}}
-    );
+    drawChart('chart1','bar',{labels,datasets:[
+      {label:'Uber',data:f.map(r=>r.uber.sales),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
+      {label:'出前館',data:f.map(r=>r.demae.sales),backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
+      {label:'Rocket',data:f.map(r=>r.rocket.sales),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
+    ]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{callback:v=>`¥${(v/1000).toFixed(0)}k`,font:{size:10}}}}});
+    drawChart('chart2','bar',{labels,datasets:[
+      {label:'Uber',data:f.map(r=>r.uber.count),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
+      {label:'出前館',data:f.map(r=>r.demae.count),backgroundColor:'rgba(255,107,0,.75)',borderColor:'#FF6B00',borderWidth:1},
+      {label:'Rocket',data:f.map(r=>r.rocket.count),backgroundColor:'rgba(233,30,99,.75)',borderColor:'#E91E63',borderWidth:1}
+    ]},{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10},autoSkip:true,maxRotation:0}},y:{ticks:{font:{size:10},stepSize:1}}}});
+    drawChart('chart3','line',{labels:recentMonths.map(m=>m.slice(5)+'月'),datasets:plats.map(p=>({
+      label:p.n,data:recentMonths.map(mo=>records.filter(r=>r.date.startsWith(mo)).reduce((s,r)=>s+r[p.k].sales,0)),
+      borderColor:p.c,backgroundColor:p.c+'33',fill:false,tension:.3,pointRadius:3
+    }))},{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10},boxWidth:10}}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>`¥${(v/1000).toFixed(0)}k`,font:{size:10}}}}});
   }));
+}
+
+// ── カレンダーページ ──────────────────────────
+let calSelected = null;
+function renderCal(){
+  const month=getCalMonthStr();
+  document.getElementById('cal-label').textContent=month.replace('-','年')+'月';
+  const[y,m]=month.split('-').map(Number);
+  const today=todayStr();
+  const f=records.filter(r=>r.date.startsWith(month));
+  const monthS=f.reduce((s,r)=>s+totalOf(r),0);
+  const monthC=f.reduce((s,r)=>s+countOf(r),0);
+  const activeDays=f.filter(r=>totalOf(r)>0).length;
+
+  document.getElementById('cal-month-stats').innerHTML=`
+    <div class="cal-month-stat"><div class="cms-label">月間売上</div><div class="cms-val">¥${monthS>=10000?(monthS/10000).toFixed(1)+'万':monthS.toLocaleString()}</div></div>
+    <div class="cal-month-stat"><div class="cms-label">稼働日数</div><div class="cms-val">${activeDays}日</div></div>
+    <div class="cal-month-stat"><div class="cms-label">総件数</div><div class="cms-val">${monthC}件</div></div>
+  `;
+
+  const firstDow=new Date(y,m-1,1).getDay();
+  const daysInMonth=new Date(y,m,0).getDate();
+  const maxSales=Math.max(...f.map(r=>totalOf(r)),1);
+
+  let html='';
+  // 曜日ヘッダー
+  DAYS.forEach((d,i)=>{ html+=`<div class="cal-dow" style="color:${i===0?'#E91E63':i===6?'#4A90D9':'var(--text2)'}">${d}</div>`; });
+  // 前月の空白
+  for(let i=0;i<firstDow;i++) html+='<div></div>';
+  // 日付セル
+  for(let d=1;d<=daysInMonth;d++){
+    const dateStr=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const rec=records.find(r=>r.date===dateStr);
+    const sales=rec?totalOf(rec):0;
+    const dow=new Date(dateStr+'T00:00:00').getDay();
+    const isToday=dateStr===today;
+    const isSel=dateStr===calSelected;
+    const intensity=sales>0?Math.max(0.15,sales/maxSales):0;
+    const bg=sales>0?`rgba(6,193,103,${intensity*0.6})`:'';
+    html+=`<div class="cal-cell${sales>0?' has-data':''}${isToday?' today':''}${isSel?' selected':''}" data-date="${dateStr}" style="${bg?'background:'+bg:''}">
+      <span class="cal-date ${dow===0?'sun':dow===6?'sat':''}">${d}</span>
+      ${sales>0?`<span class="cal-sales">${sales>=10000?(sales/10000).toFixed(1)+'万':('¥'+sales.toLocaleString())}</span>`:''}
+    </div>`;
+  }
+  document.getElementById('cal-grid').innerHTML=html;
+
+  document.querySelectorAll('.cal-cell').forEach(cell=>{
+    cell.addEventListener('click',()=>{
+      const date=cell.dataset.date;
+      if(calSelected===date){ calSelected=null; document.getElementById('cal-detail').classList.remove('show'); }
+      else { calSelected=date; showCalDetail(date); }
+      renderCal();
+    });
+  });
+
+  if(calSelected) showCalDetail(calSelected);
+}
+
+function showCalDetail(date){
+  const rec=records.find(r=>r.date===date);
+  const detail=document.getElementById('cal-detail');
+  if(!rec||totalOf(rec)===0){ detail.classList.remove('show'); return; }
+  const t=totalOf(rec),c=countOf(rec),u=c?Math.round(t/c):0,h=hoursOf(rec);
+  const dow=DAYS[new Date(date+'T00:00:00').getDay()];
+  const[y,m,d]=date.split('-').map(Number);
+  const pm=m===1?12:m-1, py=m===1?y-1:y;
+  const prevDate=`${py}-${String(pm).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const prevRec=records.find(r=>r.date===prevDate);
+  const prevT=prevRec?totalOf(prevRec):null;
+  const diffStr=prevT!==null?(()=>{const diff=t-prevT,pct=prevT?Math.round(diff/prevT*100):0;return diff>0?`<span class="up">▲¥${diff.toLocaleString()}(+${pct}%)</span>`:diff<0?`<span class="down">▼¥${Math.abs(diff).toLocaleString()}(${pct}%)</span>`:'<span class="neu">同額</span>';})():'';
+  const sessHtml=(rec.sessions&&rec.sessions.length)?rec.sessions.map(s=>`<div style="font-size:12px;color:var(--text2)">${s.depart}→${s.return} (${fmtHours(sessionsToHours([s]))})</div>`).join(''):'';
+  detail.className='cal-detail show';
+  detail.innerHTML=`
+    <div class="cal-detail-title">${date.slice(5).replace('-','/')} ${wmapS[rec.weather]||'☀️'} ${dow}曜日</div>
+    <div class="stat2">
+      <div class="stat-card"><div class="slabel">合計売上</div><div class="sval up">¥${t.toLocaleString()}</div>${prevT!==null?`<div style="font-size:11px;margin-top:3px">先月同日 ${diffStr}</div>`:''}</div>
+      <div class="stat-card"><div class="slabel">件数 / 単価</div><div class="sval">${c}件</div><div class="sdiff neu">¥${u.toLocaleString()}/件</div></div>
+      ${h>0?`<div class="stat-card"><div class="slabel">稼働時間</div><div class="sval">${fmtHours(h)}</div><div class="sdiff neu">時給¥${Math.round(t/h).toLocaleString()}</div></div>`:''}
+      ${rec.uber.sales>0?`<div class="stat-card"><div class="slabel">Uber Eats</div><div class="sval">¥${rec.uber.sales.toLocaleString()}</div><div class="sdiff neu">${rec.uber.count}件</div></div>`:''}
+      ${rec.demae.sales>0?`<div class="stat-card"><div class="slabel">出前館</div><div class="sval">¥${rec.demae.sales.toLocaleString()}</div><div class="sdiff neu">${rec.demae.count}件</div></div>`:''}
+      ${rec.rocket.sales>0?`<div class="stat-card"><div class="slabel">Rocket Now</div><div class="sval">¥${rec.rocket.sales.toLocaleString()}</div><div class="sdiff neu">${rec.rocket.count}件</div></div>`:''}
+    </div>
+    ${sessHtml?`<div style="margin-top:4px;margin-bottom:8px">${sessHtml}</div>`:''}
+    ${rec.note?`<div style="font-size:12px;color:var(--text2);padding:8px;background:var(--bg2);border-radius:var(--radius)">📝 ${rec.note}</div>`:''}
+  `;
 }
 
 // ── 年間ページ ────────────────────────────────
@@ -793,52 +943,30 @@ function renderYear(){
   const year=getYearStr();
   document.getElementById('year-label').textContent=year+'年 年間レポート';
   const yf=records.filter(r=>r.date.startsWith(year));
-  const yearS=yf.reduce((s,r)=>s+totalOf(r),0);
-  const yearC=yf.reduce((s,r)=>s+countOf(r),0);
-  const yearH=yf.reduce((s,r)=>s+hoursOf(r),0);
-  const yearHW=yearH>0?Math.round(yearS/yearH):0;
+  const yearS=yf.reduce((s,r)=>s+totalOf(r),0),yearC=yf.reduce((s,r)=>s+countOf(r),0);
+  const yearH=yf.reduce((s,r)=>s+hoursOf(r),0),yearHW=yearH>0?Math.round(yearS/yearH):0;
   const activeYDays=yf.filter(r=>totalOf(r)>0).length;
-  const prevYear=String(Number(year)-1);
-  const pyf=records.filter(r=>r.date.startsWith(prevYear));
-  const prevYS=pyf.reduce((s,r)=>s+totalOf(r),0);
-
+  const prevYS=records.filter(r=>r.date.startsWith(String(Number(year)-1))).reduce((s,r)=>s+totalOf(r),0);
+  const[y]=year.split('').map(Number);
   const months=Array.from({length:12},(_,i)=>{
     const mo=`${year}-${String(i+1).padStart(2,'0')}`;
     const mf=records.filter(r=>r.date.startsWith(mo));
-    const s=mf.reduce((a,r)=>a+totalOf(r),0);
-    const c=mf.reduce((a,r)=>a+countOf(r),0);
-    const act=mf.filter(r=>totalOf(r)>0).length;
+    const s=mf.reduce((a,r)=>a+totalOf(r),0),c=mf.reduce((a,r)=>a+countOf(r),0),act=mf.filter(r=>totalOf(r)>0).length;
     const pm=i===0?`${Number(year)-1}-12`:`${year}-${String(i).padStart(2,'0')}`;
-    const pmf=records.filter(r=>r.date.startsWith(pm));
-    const ps=pmf.reduce((a,r)=>a+totalOf(r),0);
-    return {mo,s,c,act,ps};
+    const ps=records.filter(r=>r.date.startsWith(pm)).reduce((a,r)=>a+totalOf(r),0);
+    return{mo,s,c,act,ps};
   });
   const maxMS=Math.max(...months.map(m=>m.s),1);
-
   const monthRows=months.filter(m=>m.s>0).map(m=>{
     const pct=Math.round(m.s/maxMS*100);
     const diff=m.ps?Math.round((m.s-m.ps)/m.ps*100):null;
     const diffStr=diff!==null?(diff>0?`<span class="up">▲${diff}%</span>`:`<span class="down">▼${Math.abs(diff)}%</span>`):'';
-    return `<div class="month-row">
-      <div class="mr-left">
-        <div class="mr-month">${m.mo.replace('-','年')}月</div>
-        <div class="mr-days">${m.act}日稼働 / ${m.c}件</div>
-        <div class="bar-wrap" style="width:100%;margin-top:4px"><div class="bar-fill" style="width:${pct}%;background:var(--uber)"></div></div>
-      </div>
-      <div class="mr-right">
-        <div class="mr-sales">¥${m.s.toLocaleString()}</div>
-        <div class="mr-diff">${diffStr}</div>
-      </div>
-    </div>`;
+    return `<div class="month-row"><div class="mr-left"><div class="mr-month">${m.mo.replace('-','年')}月</div><div class="mr-days">${m.act}日稼働 / ${m.c}件</div><div class="bar-wrap" style="width:100%;margin-top:4px"><div class="bar-fill" style="width:${pct}%;background:var(--uber)"></div></div></div><div class="mr-right"><div class="mr-sales">¥${m.s.toLocaleString()}</div><div class="mr-diff">${diffStr}</div></div></div>`;
   }).join('');
 
   document.getElementById('year-content').innerHTML=`
     <div class="stat2">
-      <div class="stat-card stat-card-full">
-        <div class="slabel">${year}年 年間総売上</div>
-        <div class="sval" style="font-size:26px">¥${yearS.toLocaleString()}</div>
-        <div class="sdiff">${diffHtml(yearS,prevYS,'前年比')}</div>
-      </div>
+      <div class="stat-card stat-card-full"><div class="slabel">${year}年 年間総売上</div><div class="sval" style="font-size:26px">¥${yearS.toLocaleString()}</div><div class="sdiff">${diffHtml(yearS,prevYS,'前年比')}</div></div>
       <div class="stat-card"><div class="slabel">年間総件数</div><div class="sval">${yearC}件</div></div>
       <div class="stat-card"><div class="slabel">稼働日数</div><div class="sval">${activeYDays}日</div></div>
       ${yearHW?`<div class="stat-card"><div class="slabel">年間平均時給</div><div class="sval up">¥${yearHW.toLocaleString()}</div><div class="sdiff neu">計${yearH.toFixed(0)}h稼働</div></div>`:''}
@@ -850,40 +978,46 @@ function renderYear(){
     <div class="section-title">CSVエクスポート</div>
     <button class="csv-btn" id="btn-csv"><i class="ti ti-file-spreadsheet"></i> ${year}年のデータをCSVでダウンロード</button>
   `;
-
   document.getElementById('btn-csv').addEventListener('click',()=>exportCSV(year));
-
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     drawChart('chart-year','bar',
       {labels:['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'],
        datasets:[{label:'月間売上',data:months.map(m=>m.s),backgroundColor:months.map(m=>m.s===Math.max(...months.map(x=>x.s))?'rgba(186,117,23,0.8)':'rgba(6,193,103,0.75)'),borderColor:months.map(m=>m.s===Math.max(...months.map(x=>x.s))?'#BA7517':'#06C167'),borderWidth:1}]},
-      {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},
-       scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>`¥${(v/10000).toFixed(0)}万`,font:{size:10}}}}}
+      {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},scales:{x:{ticks:{font:{size:10}}},y:{ticks:{callback:v=>`¥${(v/10000).toFixed(0)}万`,font:{size:10}}}}}
     );
   }));
 }
 
 function showToast(msg){
   const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
+  t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 
 // ── 初期化 ───────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
-  document.getElementById('inp-date').value=todayStr();
+  const today=todayStr();
+  document.getElementById('inp-date').value=today;
+  sessionDate=today;
+
   document.getElementById('btn-save').addEventListener('click',saveRecord);
+  document.getElementById('btn-depart').addEventListener('click',onDepart);
+  document.getElementById('btn-return').addEventListener('click',onReturn);
   document.getElementById('btn-prev-month').addEventListener('click',()=>{monthOffset--;renderSummary();});
   document.getElementById('btn-next-month').addEventListener('click',()=>{monthOffset++;renderSummary();});
+  document.getElementById('btn-cal-prev').addEventListener('click',()=>{calOffset--;renderCal();});
+  document.getElementById('btn-cal-next').addEventListener('click',()=>{calOffset++;renderCal();});
   document.getElementById('btn-prev-year').addEventListener('click',()=>{yearOffset--;renderYear();});
   document.getElementById('btn-next-year').addEventListener('click',()=>{yearOffset++;renderYear();});
   document.getElementById('btn-prev-day').addEventListener('click',()=>changeDay(-1));
   document.getElementById('btn-next-day').addEventListener('click',()=>changeDay(1));
   document.getElementById('nav-entry').addEventListener('click',()=>showPage('entry'));
   document.getElementById('nav-summary').addEventListener('click',()=>showPage('summary'));
+  document.getElementById('nav-cal').addEventListener('click',()=>showPage('cal'));
   document.getElementById('nav-year').addEventListener('click',()=>showPage('year'));
   document.getElementById('inp-date').addEventListener('change',e=>loadEntryForDate(e.target.value));
-  [...inputIds,'inp-start','inp-end'].forEach(id=>document.getElementById(id).addEventListener('input',updateDailyTotal));
+  inputIds.forEach(id=>document.getElementById(id).addEventListener('input',updateDailyTotal));
+
   fetchForecast();
   listenToDatabase();
 });
