@@ -106,6 +106,14 @@ body{display:flex;flex-direction:column}
 .chart-legend{display:flex;gap:12px;margin-bottom:8px;font-size:11px;color:var(--text2);flex-wrap:wrap}
 .chart-legend span{display:flex;align-items:center;gap:4px}
 .chart-legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+/* 合計報酬バナー */
+.daily-total-banner{border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:14px;background:var(--bg2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.daily-total-banner .dtb-label{font-size:11px;color:var(--text2);margin-bottom:3px}
+.daily-total-banner .dtb-amount{font-size:32px;font-weight:700;color:var(--uber);letter-spacing:-0.5px;line-height:1}
+.daily-total-banner .dtb-amount.zero{color:var(--text3)}
+.daily-total-banner .dtb-right{text-align:right}
+.daily-total-banner .dtb-count{font-size:12px;color:var(--text2);margin-top:4px}
+.daily-total-banner .dtb-unit{font-size:12px;color:var(--text2);margin-top:2px}
 .empty{text-align:center;padding:3rem 1rem;color:var(--text2);font-size:13px}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1}
@@ -144,6 +152,16 @@ body{display:flex;flex-direction:column}
       </div>
     </div>
     <div class="entry-hint" id="entry-hint"></div>
+    <div class="daily-total-banner" id="daily-total-banner">
+      <div>
+        <div class="dtb-label">本日の合計報酬</div>
+        <div class="dtb-amount zero" id="dtb-amount">¥0</div>
+      </div>
+      <div class="dtb-right">
+        <div class="dtb-count" id="dtb-count">0件</div>
+        <div class="dtb-unit" id="dtb-unit">単価 --</div>
+      </div>
+    </div>
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
       <div class="plat-inputs">
@@ -296,6 +314,24 @@ function renderForecast(daily){
 }
 
 // ── 入力欄の日付連動 ──────────────────────────
+function updateDailyTotal(){
+  const us = +document.getElementById('uber-s').value||0;
+  const uc = +document.getElementById('uber-c').value||0;
+  const ds = +document.getElementById('demae-s').value||0;
+  const dc = +document.getElementById('demae-c').value||0;
+  const rs = +document.getElementById('rocket-s').value||0;
+  const rc = +document.getElementById('rocket-c').value||0;
+  const total = us+ds+rs;
+  const count = uc+dc+rc;
+  const unit  = count>0 ? Math.round(total/count) : 0;
+  const amtEl  = document.getElementById('dtb-amount');
+  const cntEl  = document.getElementById('dtb-count');
+  const unitEl = document.getElementById('dtb-unit');
+  amtEl.textContent  = `¥${total.toLocaleString()}`;
+  amtEl.className    = total>0 ? 'dtb-amount' : 'dtb-amount zero';
+  cntEl.textContent  = `${count}件`;
+  unitEl.textContent = count>0 ? `単価 ¥${unit.toLocaleString()}` : '単価 --';
+}
 function loadEntryForDate(date){
   const hint = document.getElementById('entry-hint');
   const existing = records.find(r => r.date === date);
@@ -315,6 +351,7 @@ function loadEntryForDate(date){
     hint.textContent = '';
     hint.className = 'entry-hint';
   }
+  updateDailyTotal();
 }
 
 // ── Firebase ──────────────────────────────────
@@ -386,6 +423,7 @@ async function saveRecord(){
     const hint = document.getElementById('entry-hint');
     hint.textContent = '✓ 保存済みのデータを読み込みました（上書き保存できます）';
     hint.className = 'entry-hint show loaded';
+    updateDailyTotal();
   } catch(e){ showToast('保存に失敗しました'); }
 }
 
@@ -614,6 +652,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('nav-entry').addEventListener('click', ()=>showPage('entry'));
   document.getElementById('nav-summary').addEventListener('click', ()=>showPage('summary'));
   document.getElementById('inp-date').addEventListener('change', e=>loadEntryForDate(e.target.value));
+
+  // 入力中にリアルタイムで合計更新
+  ['uber-s','uber-c','demae-s','demae-c','rocket-s','rocket-c'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', updateDailyTotal);
+  });
 
   fetchForecast();
   listenToDatabase();
