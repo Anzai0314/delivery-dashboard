@@ -283,6 +283,8 @@ body{display:flex;flex-direction:column}
       </div>
       <div id="hourly-summary-anchor"></div>
     </div>
+    <!-- 時給換算カード（session-block外に固定配置） -->
+    <div id="hourly-summary-anchor-outer"></div>
 
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
@@ -610,8 +612,8 @@ function renderHourlySummary(totalH){
       <div class="hourly-cell"><div class="hc-label">件/時間</div><div class="hc-val">${delsPerH>0?delsPerH+'件':'--'}</div></div>
     </div>
   `;
-  const target=document.getElementById('hourly-summary-anchor');
-  if(target) target.appendChild(card);
+  const target=document.getElementById('hourly-summary-anchor-outer');
+  if(target){ target.innerHTML=''; target.appendChild(card); }
   else document.getElementById('total-hours-row').parentNode.appendChild(card);
 }
 
@@ -716,7 +718,9 @@ function listenToDatabase(){
     snap.forEach(d=>records.push({date:d.id,...d.data()}));
     records.sort((a,b)=>a.date.localeCompare(b.date));
     const cur=document.getElementById('inp-date').value;
-    if(cur){ loadEntryForDate(cur); }
+    // 稼働中セッションがある場合は入力欄の上書きをスキップ
+    const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
+    if(cur && !inSession){ loadEntryForDate(cur); }
     fetchForecast();
     updateViews();
     document.getElementById('sync-status').textContent='同期完了 ✓';
@@ -778,7 +782,7 @@ async function saveRecord(silent=false){
     uber:  {sales:+document.getElementById('uber-s').value||0,count:+document.getElementById('uber-c').value||0},
     demae: {sales:+document.getElementById('demae-s').value||0,count:+document.getElementById('demae-c').value||0},
     rocket:{sales:+document.getElementById('rocket-s').value||0,count:+document.getElementById('rocket-c').value||0},
-    sessions: sessions.filter(s=>s.depart&&s.return),
+    sessions: sessions.filter(s=>s.depart), // returnがnullでも保存（稼働中セッションを消さない）
     note: document.getElementById('inp-note').value||''
   };
   try{
