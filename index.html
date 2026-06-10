@@ -64,6 +64,22 @@ body{display:flex;flex-direction:column}
 .total-hours-row{display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)}
 .total-hours-row .th-label{font-size:11px;color:var(--text2)}
 .total-hours-row .th-val{font-size:14px;font-weight:700;color:var(--uber)}
+.session-row{background:var(--bg);border-radius:var(--radius);margin-bottom:4px;overflow:hidden}
+.session-row-header{display:flex;align-items:center;justify-content:space-between;padding:7px 10px}
+.session-row-edit{display:none;padding:8px 10px;border-top:0.5px solid var(--border);background:var(--bg2);gap:8px;align-items:center;flex-wrap:wrap}
+.session-row-edit.open{display:flex}
+.session-row-edit label{font-size:11px;color:var(--text2);margin-right:2px}
+.session-row-edit input[type=time]{padding:5px 8px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);font-size:13px}
+.sr-edit-btn{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 4px}
+.sr-edit-btn.active{color:var(--uber)}
+.sr-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px;padding:2px 4px}
+/* 時給サマリーカード */
+.hourly-summary{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px;margin-top:8px;background:var(--bg2)}
+.hourly-summary .hs-title{font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px}
+.hourly-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.hourly-cell{background:var(--bg);border-radius:var(--radius);padding:8px;text-align:center}
+.hourly-cell .hc-label{font-size:10px;color:var(--text2);margin-bottom:2px}
+.hourly-cell .hc-val{font-size:14px;font-weight:700}
 
 /* Entry */
 .date-weather-row{display:grid;grid-template-columns:1.4fr 1fr;gap:10px;margin-bottom:14px}
@@ -480,8 +496,7 @@ function renderSessions(){
   const totalRow=document.getElementById('total-hours-row');
   const returnBtn=document.getElementById('btn-return');
 
-  // 稼働中（最後のセッションにreturnがない）かどうか
-  const inSession=sessions.length>0 && !sessions[sessions.length-1].return;
+  const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
   returnBtn.className=inSession?'btn-return active-session':'btn-return';
 
   if(!sessions.length){ list.innerHTML=''; totalRow.style.display='none'; updateTotalHoursDisp(); return; }
@@ -489,19 +504,68 @@ function renderSessions(){
   list.innerHTML=sessions.map((s,i)=>{
     const dur=s.return?fmtHours(sessionsToHours([s])):'稼働中...';
     const retStr=s.return||'--:--';
-    return `<div class="session-row">
-      <span class="sr-time">${s.depart} → ${retStr}</span>
-      <span class="sr-dur">${dur}</span>
-      <button class="sr-del" data-i="${i}"><i class="ti ti-x"></i></button>
+    return `<div class="session-row" id="srow-${i}">
+      <div class="session-row-header">
+        <span class="sr-time">${s.depart} → ${retStr}</span>
+        <span style="display:flex;align-items:center;gap:2px">
+          <span class="sr-dur" style="font-size:12px;font-weight:600;color:var(--uber);margin-right:4px">${dur}</span>
+          <button class="sr-edit-btn" data-i="${i}" title="時刻を修正"><i class="ti ti-pencil"></i></button>
+          <button class="sr-del" data-i="${i}" title="削除"><i class="ti ti-x"></i></button>
+        </span>
+      </div>
+      <div class="session-row-edit" id="sedit-${i}">
+        <div style="display:flex;align-items:center;gap:4px">
+          <label>出発</label>
+          <input type="time" id="sedit-dep-${i}" value="${s.depart||''}">
+        </div>
+        <div style="display:flex;align-items:center;gap:4px">
+          <label>帰宅</label>
+          <input type="time" id="sedit-ret-${i}" value="${s.return||''}">
+        </div>
+        <button style="padding:5px 10px;border-radius:var(--radius);background:var(--uber);color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:600" data-confirm="${i}">確定</button>
+      </div>
     </div>`;
   }).join('');
 
+  // 編集ボタン：トグル
+  list.querySelectorAll('.sr-edit-btn').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      const i=+e.currentTarget.dataset.i;
+      const editRow=document.getElementById(`sedit-${i}`);
+      const isOpen=editRow.classList.contains('open');
+      // 全部閉じる
+      list.querySelectorAll('.session-row-edit').forEach(r=>r.classList.remove('open'));
+      list.querySelectorAll('.sr-edit-btn').forEach(b=>b.classList.remove('active'));
+      if(!isOpen){
+        editRow.classList.add('open');
+        e.currentTarget.classList.add('active');
+      }
+    });
+  });
+
+  // 確定ボタン
+  list.querySelectorAll('[data-confirm]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      const i=+e.currentTarget.dataset.confirm;
+      const depVal=document.getElementById(`sedit-dep-${i}`).value;
+      const retVal=document.getElementById(`sedit-ret-${i}`).value;
+      if(!depVal){ showToast('出発時刻を入力してください'); return; }
+      sessions[i].depart=depVal;
+      sessions[i].return=retVal||null;
+      renderSessions();
+      updateDailyTotal();
+      scheduleAutoSave();
+    });
+  });
+
+  // 削除ボタン
   list.querySelectorAll('.sr-del').forEach(btn=>{
     btn.addEventListener('click',e=>{
       const i=+e.currentTarget.dataset.i;
       sessions.splice(i,1);
       renderSessions();
       updateDailyTotal();
+      scheduleAutoSave();
     });
   });
 
@@ -513,6 +577,42 @@ function renderSessions(){
     totalRow.style.display='none';
   }
   updateTotalHoursDisp();
+  renderHourlySummary(totalH);
+}
+
+function renderHourlySummary(totalH){
+  // 既存のサマリーカードを削除して再描画
+  const existing=document.getElementById('hourly-summary-card');
+  if(existing) existing.remove();
+  if(!totalH||totalH<=0) return;
+
+  const us=+document.getElementById('uber-s').value||0;
+  const ds=+document.getElementById('demae-s').value||0;
+  const rs=+document.getElementById('rocket-s').value||0;
+  const uc=+document.getElementById('uber-c').value||0;
+  const dc=+document.getElementById('demae-c').value||0;
+  const rc=+document.getElementById('rocket-c').value||0;
+  const total=us+ds+rs;
+  const count=uc+dc+rc;
+  if(!total) return;
+
+  const hourly=Math.round(total/totalH);
+  const perDel=count?Math.round(total/count):0;
+  const delsPerH=totalH>0?Math.round(count/totalH*10)/10:0;
+
+  const card=document.createElement('div');
+  card.id='hourly-summary-card';
+  card.className='hourly-summary';
+  card.innerHTML=`
+    <div class="hs-title"><i class="ti ti-clock-hour-4"></i> 時給換算（稼働 ${fmtHours(totalH)}）</div>
+    <div class="hourly-grid">
+      <div class="hourly-cell"><div class="hc-label">時給</div><div class="hc-val up">¥${hourly.toLocaleString()}</div></div>
+      <div class="hourly-cell"><div class="hc-label">件単価</div><div class="hc-val">¥${perDel.toLocaleString()}</div></div>
+      <div class="hourly-cell"><div class="hc-label">件/時間</div><div class="hc-val">${delsPerH}件</div></div>
+    </div>
+  `;
+  // session-block の直後に挿入
+  document.getElementById('total-hours-row').parentNode.appendChild(card);
 }
 
 function updateTotalHoursDisp(){
@@ -528,6 +628,7 @@ function onDepart(){
   sessions.push({depart:nowTime(),return:null});
   renderSessions();
   updateDailyTotal();
+  scheduleAutoSave();
 }
 
 function onReturn(){
@@ -538,6 +639,7 @@ function onReturn(){
   sessions[sessions.length-1].return=nowTime();
   renderSessions();
   updateDailyTotal();
+  scheduleAutoSave();
 }
 
 // ── 合計バナー更新 ────────────────────────────
@@ -660,10 +762,16 @@ function changeDay(offset){
   loadEntryForDate(inp.value);
 }
 
-// ── 保存 ──────────────────────────────────────
-async function saveRecord(){
+// ── 保存（silent=trueで自動保存、通知なし） ────
+let autoSaveTimer=null;
+function scheduleAutoSave(){
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer=setTimeout(()=>saveRecord(true),800);
+}
+
+async function saveRecord(silent=false){
   const date=document.getElementById('inp-date').value;
-  if(!date){showToast('日付を入力してください');return;}
+  if(!date){ if(!silent) showToast('日付を入力してください'); return; }
   const rec={
     weather:document.getElementById('inp-weather').value,
     uber:  {sales:+document.getElementById('uber-s').value||0,count:+document.getElementById('uber-c').value||0},
@@ -675,11 +783,13 @@ async function saveRecord(){
   try{
     document.getElementById('sync-status').textContent='保存中...';
     await setDoc(doc(db,'delivery_records',date),rec);
-    showToast('保存しました ✓');
-    document.getElementById('entry-hint').textContent='✓ 保存済みデータを読み込みました（上書き保存できます）';
-    document.getElementById('entry-hint').className='entry-hint show loaded';
+    document.getElementById('sync-status').textContent='同期完了 ✓';
+    const hint=document.getElementById('entry-hint');
+    hint.textContent='✓ 保存済みデータを読み込みました（上書き保存できます）';
+    hint.className='entry-hint show loaded';
+    if(!silent) showToast('保存しました ✓');
     updateDailyTotal();
-  }catch(e){showToast('保存に失敗しました');}
+  }catch(e){ if(!silent) showToast('保存に失敗しました'); }
 }
 
 async function saveExpense(month,amount){try{await setDoc(doc(db,'monthly_expenses',month),{amount:Number(amount)||0});}catch(e){}}
@@ -1000,7 +1110,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('inp-date').value=today;
   sessionDate=today;
 
-  document.getElementById('btn-save').addEventListener('click',saveRecord);
+  document.getElementById('btn-save').addEventListener('click',()=>saveRecord(false));
   document.getElementById('btn-depart').addEventListener('click',onDepart);
   document.getElementById('btn-return').addEventListener('click',onReturn);
   document.getElementById('btn-prev-month').addEventListener('click',()=>{monthOffset--;renderSummary();});
@@ -1016,7 +1126,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('nav-cal').addEventListener('click',()=>showPage('cal'));
   document.getElementById('nav-year').addEventListener('click',()=>showPage('year'));
   document.getElementById('inp-date').addEventListener('change',e=>loadEntryForDate(e.target.value));
-  inputIds.forEach(id=>document.getElementById(id).addEventListener('input',updateDailyTotal));
+
+  // 数値入力：inputでリアルタイム表示更新、changeで自動保存
+  inputIds.forEach(id=>{
+    document.getElementById(id).addEventListener('input',updateDailyTotal);
+    document.getElementById(id).addEventListener('change',scheduleAutoSave);
+  });
+  // 天候・メモが変わったら自動保存
+  document.getElementById('inp-weather').addEventListener('change',scheduleAutoSave);
+  document.getElementById('inp-note').addEventListener('change',scheduleAutoSave);
 
   fetchForecast();
   listenToDatabase();
