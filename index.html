@@ -249,11 +249,13 @@ body{display:flex;flex-direction:column}
       <div>
         <div class="dtb-label">本日の合計報酬</div>
         <div class="dtb-amount zero" id="dtb-amount">¥0</div>
+        <div class="dtb-sub" id="dtb-count" style="margin-top:4px">0件</div>
+        <div class="dtb-sub" id="dtb-unit">単価 --</div>
       </div>
       <div class="dtb-right">
-        <div class="dtb-sub" id="dtb-count">0件</div>
-        <div class="dtb-sub" id="dtb-unit">単価 --</div>
-        <div class="dtb-sub" id="dtb-hourly" style="color:var(--uber)"></div>
+        <div class="dtb-label">稼働時間</div>
+        <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px" id="dtb-hours">--</div>
+        <div class="dtb-sub" id="dtb-hourly" style="color:var(--uber);font-weight:700;font-size:13px">時給 --</div>
       </div>
     </div>
 
@@ -281,11 +283,7 @@ body{display:flex;flex-direction:column}
         <span class="th-label">本日の稼働合計</span>
         <span class="th-val" id="total-hours-val"></span>
       </div>
-      <div id="hourly-summary-anchor"></div>
     </div>
-    <!-- 時給換算カード（session-block外に固定配置） -->
-    <div id="hourly-summary-anchor-outer"></div>
-
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
       <div class="plat-inputs">
@@ -580,41 +578,7 @@ function renderSessions(){
     totalRow.style.display='none';
   }
   updateTotalHoursDisp();
-  renderHourlySummary(totalH);
-}
-
-function renderHourlySummary(totalH){
-  const existing=document.getElementById('hourly-summary-card');
-  if(existing) existing.remove();
-  if(!totalH||totalH<=0) return;
-
-  const us=+document.getElementById('uber-s').value||0;
-  const ds=+document.getElementById('demae-s').value||0;
-  const rs=+document.getElementById('rocket-s').value||0;
-  const uc=+document.getElementById('uber-c').value||0;
-  const dc=+document.getElementById('demae-c').value||0;
-  const rc=+document.getElementById('rocket-c').value||0;
-  const total=us+ds+rs;
-  const count=uc+dc+rc;
-
-  const hourly=total>0?Math.round(total/totalH):0;
-  const perDel=count>0?Math.round(total/count):0;
-  const delsPerH=Math.round(count/totalH*10)/10;
-
-  const card=document.createElement('div');
-  card.id='hourly-summary-card';
-  card.className='hourly-summary';
-  card.innerHTML=`
-    <div class="hs-title"><i class="ti ti-clock-hour-4"></i> 時給換算（稼働 ${fmtHours(totalH)}）</div>
-    <div class="hourly-grid">
-      <div class="hourly-cell"><div class="hc-label">時給</div><div class="hc-val up">${hourly>0?'¥'+hourly.toLocaleString():'--'}</div></div>
-      <div class="hourly-cell"><div class="hc-label">件単価</div><div class="hc-val">${perDel>0?'¥'+perDel.toLocaleString():'--'}</div></div>
-      <div class="hourly-cell"><div class="hc-label">件/時間</div><div class="hc-val">${delsPerH>0?delsPerH+'件':'--'}</div></div>
-    </div>
-  `;
-  const target=document.getElementById('hourly-summary-anchor-outer');
-  if(target){ target.innerHTML=''; target.appendChild(card); }
-  else document.getElementById('total-hours-row').parentNode.appendChild(card);
+  updateDailyTotal();
 }
 
 function updateTotalHoursDisp(){
@@ -645,6 +609,19 @@ function onReturn(){
 }
 
 // ── 合計バナー更新 ────────────────────────────
+function calcCurrentHours(){
+  let mins=0;
+  sessions.forEach(s=>{
+    if(!s.depart) return;
+    const[dh,dm]=s.depart.split(':').map(Number);
+    const retTime=s.return||nowTime();
+    const[rh,rm]=retTime.split(':').map(Number);
+    const diff=(rh*60+rm)-(dh*60+dm);
+    if(diff>0) mins+=diff;
+  });
+  return mins/60;
+}
+
 function updateDailyTotal(){
   const us=+document.getElementById('uber-s').value||0;
   const uc=+document.getElementById('uber-c').value||0;
@@ -654,15 +631,15 @@ function updateDailyTotal(){
   const rc=+document.getElementById('rocket-c').value||0;
   const total=us+ds+rs, count=uc+dc+rc;
   const unit=count>0?Math.round(total/count):0;
-  const hrs=sessionsToHours(sessions);
+  const hrs=calcCurrentHours();
   const amtEl=document.getElementById('dtb-amount');
   amtEl.textContent=`¥${total.toLocaleString()}`;
   amtEl.className=total>0?'dtb-amount':'dtb-amount zero';
   document.getElementById('dtb-count').textContent=`${count}件`;
   document.getElementById('dtb-unit').textContent=count>0?`単価 ¥${unit.toLocaleString()}`:'単価 --';
-  document.getElementById('dtb-hourly').textContent=hrs>0&&total>0?`時給 ¥${Math.round(total/hrs).toLocaleString()}`:'';
+  document.getElementById('dtb-hours').textContent=hrs>0?fmtHours(hrs):'--';
+  document.getElementById('dtb-hourly').textContent=hrs>0&&total>0?`時給 ¥${Math.round(total/hrs).toLocaleString()}`:'時給 --';
   updateLastMonthBar(total);
-  renderHourlySummary(hrs);
 }
 
 // ── 先月同日比較 ──────────────────────────────
@@ -782,7 +759,7 @@ async function saveRecord(silent=false){
     uber:  {sales:+document.getElementById('uber-s').value||0,count:+document.getElementById('uber-c').value||0},
     demae: {sales:+document.getElementById('demae-s').value||0,count:+document.getElementById('demae-c').value||0},
     rocket:{sales:+document.getElementById('rocket-s').value||0,count:+document.getElementById('rocket-c').value||0},
-    sessions: sessions.filter(s=>s.depart), // returnがnullでも保存（稼働中セッションを消さない）
+    sessions: sessions.filter(s=>s.depart),
     note: document.getElementById('inp-note').value||''
   };
   try{
