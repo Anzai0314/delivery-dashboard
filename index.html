@@ -281,6 +281,7 @@ body{display:flex;flex-direction:column}
         <span class="th-label">本日の稼働合計</span>
         <span class="th-val" id="total-hours-val"></span>
       </div>
+      <div id="hourly-summary-anchor"></div>
     </div>
 
     <div class="plat-block">
@@ -581,7 +582,6 @@ function renderSessions(){
 }
 
 function renderHourlySummary(totalH){
-  // 既存のサマリーカードを削除して再描画
   const existing=document.getElementById('hourly-summary-card');
   if(existing) existing.remove();
   if(!totalH||totalH<=0) return;
@@ -594,11 +594,10 @@ function renderHourlySummary(totalH){
   const rc=+document.getElementById('rocket-c').value||0;
   const total=us+ds+rs;
   const count=uc+dc+rc;
-  if(!total) return;
 
-  const hourly=Math.round(total/totalH);
-  const perDel=count?Math.round(total/count):0;
-  const delsPerH=totalH>0?Math.round(count/totalH*10)/10:0;
+  const hourly=total>0?Math.round(total/totalH):0;
+  const perDel=count>0?Math.round(total/count):0;
+  const delsPerH=Math.round(count/totalH*10)/10;
 
   const card=document.createElement('div');
   card.id='hourly-summary-card';
@@ -606,13 +605,14 @@ function renderHourlySummary(totalH){
   card.innerHTML=`
     <div class="hs-title"><i class="ti ti-clock-hour-4"></i> 時給換算（稼働 ${fmtHours(totalH)}）</div>
     <div class="hourly-grid">
-      <div class="hourly-cell"><div class="hc-label">時給</div><div class="hc-val up">¥${hourly.toLocaleString()}</div></div>
-      <div class="hourly-cell"><div class="hc-label">件単価</div><div class="hc-val">¥${perDel.toLocaleString()}</div></div>
-      <div class="hourly-cell"><div class="hc-label">件/時間</div><div class="hc-val">${delsPerH}件</div></div>
+      <div class="hourly-cell"><div class="hc-label">時給</div><div class="hc-val up">${hourly>0?'¥'+hourly.toLocaleString():'--'}</div></div>
+      <div class="hourly-cell"><div class="hc-label">件単価</div><div class="hc-val">${perDel>0?'¥'+perDel.toLocaleString():'--'}</div></div>
+      <div class="hourly-cell"><div class="hc-label">件/時間</div><div class="hc-val">${delsPerH>0?delsPerH+'件':'--'}</div></div>
     </div>
   `;
-  // session-block の直後に挿入
-  document.getElementById('total-hours-row').parentNode.appendChild(card);
+  const target=document.getElementById('hourly-summary-anchor');
+  if(target) target.appendChild(card);
+  else document.getElementById('total-hours-row').parentNode.appendChild(card);
 }
 
 function updateTotalHoursDisp(){
@@ -660,6 +660,7 @@ function updateDailyTotal(){
   document.getElementById('dtb-unit').textContent=count>0?`単価 ¥${unit.toLocaleString()}`:'単価 --';
   document.getElementById('dtb-hourly').textContent=hrs>0&&total>0?`時給 ¥${Math.round(total/hrs).toLocaleString()}`:'';
   updateLastMonthBar(total);
+  renderHourlySummary(hrs);
 }
 
 // ── 先月同日比較 ──────────────────────────────
