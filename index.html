@@ -207,6 +207,28 @@ body{display:flex;flex-direction:column}
 .cms-val{font-size:14px;font-weight:700}
 
 .empty{text-align:center;padding:3rem 1rem;color:var(--text2);font-size:13px}
+/* バッジ */
+.badge-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.badge-card{border-radius:var(--radius-lg);padding:14px;text-align:center;border:0.5px solid var(--border)}
+.badge-card.unlocked{background:linear-gradient(135deg,rgba(6,193,103,0.12),rgba(186,117,23,0.08));border-color:var(--uber)}
+.badge-card.locked{background:var(--bg2);opacity:.5}
+.badge-icon{font-size:28px;margin-bottom:6px}
+.badge-name{font-size:12px;font-weight:700;margin-bottom:3px}
+.badge-desc{font-size:10px;color:var(--text2)}
+.badge-new{display:inline-block;background:var(--uber);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-bottom:4px}
+/* 週次 */
+.week-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.week-day-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.week-day-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius);background:var(--bg2)}
+.week-day-row.today{border-color:var(--uber)}
+.wdr-dow{font-size:12px;font-weight:700;min-width:28px}
+.wdr-date{font-size:11px;color:var(--text2);min-width:40px}
+.wdr-bar-wrap{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden}
+.wdr-bar{height:100%;border-radius:3px;background:var(--uber)}
+.wdr-sales{font-size:13px;font-weight:700;min-width:70px;text-align:right}
+.wdr-diff{font-size:10px;min-width:50px;text-align:right}
+/* 達成予測 */
+.goal-forecast{background:rgba(186,117,23,0.1);border:0.5px solid #BA7517;border-radius:var(--radius);padding:10px 12px;margin-top:8px;font-size:12px;color:#BA7517;font-weight:600}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1}
 </style>
@@ -272,7 +294,10 @@ body{display:flex;flex-direction:column}
     <div class="session-block">
       <div class="session-title">
         <span><i class="ti ti-clock"></i> 稼働セッション</span>
-        <span class="th-val" id="total-hours-disp"></span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span id="countup-timer" style="font-size:13px;font-weight:700;color:var(--uber);display:none"></span>
+          <span class="th-val" id="total-hours-disp"></span>
+        </span>
       </div>
       <div class="session-btns">
         <button class="btn-depart" id="btn-depart"><i class="ti ti-rocket"></i> 出発</button>
@@ -346,13 +371,30 @@ body{display:flex;flex-direction:column}
     <div id="year-content"></div>
   </div>
 
+  <!-- ⑤ 週次ページ -->
+  <div id="page-week" class="page">
+    <div class="month-bar">
+      <button id="btn-prev-week"><i class="ti ti-chevron-left"></i></button>
+      <span id="week-label"></span>
+      <button id="btn-next-week"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <div id="week-content"></div>
+  </div>
+
+  <!-- ⑥ バッジページ -->
+  <div id="page-badge" class="page">
+    <div style="font-size:15px;font-weight:600;margin-bottom:14px">実績バッジ</div>
+    <div id="badge-content"></div>
+  </div>
+
 </div>
 
 <div class="bottom-nav">
   <button class="nav-item active" id="nav-entry"><i class="ti ti-plus"></i>入力</button>
   <button class="nav-item" id="nav-summary"><i class="ti ti-chart-bar"></i>分析</button>
-  <button class="nav-item" id="nav-cal"><i class="ti ti-calendar"></i>カレンダー</button>
-  <button class="nav-item" id="nav-year"><i class="ti ti-calendar-stats"></i>年間</button>
+  <button class="nav-item" id="nav-week"><i class="ti ti-calendar-week"></i>週次</button>
+  <button class="nav-item" id="nav-cal"><i class="ti ti-calendar"></i>暦</button>
+  <button class="nav-item" id="nav-badge"><i class="ti ti-trophy"></i>バッジ</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -378,6 +420,8 @@ let goals    = {};
 let monthOffset = 0;
 let calOffset   = 0;
 let yearOffset  = 0;
+let weekOffset  = 0;
+let countupInterval = null;
 let chartInstances = {};
 
 // セッション管理（当日のメモリ上）
@@ -595,6 +639,7 @@ function onDepart(){
   renderSessions();
   updateDailyTotal();
   scheduleAutoSave();
+  startCountup();
 }
 
 function onReturn(){
@@ -606,6 +651,7 @@ function onReturn(){
   renderSessions();
   updateDailyTotal();
   scheduleAutoSave();
+  stopCountup();
 }
 
 // ── 合計バナー更新 ────────────────────────────
@@ -721,17 +767,22 @@ function updateViews(){
   if(document.getElementById('page-summary').classList.contains('active')) renderSummary();
   if(document.getElementById('page-cal').classList.contains('active')) renderCal();
   if(document.getElementById('page-year').classList.contains('active')) renderYear();
+  if(document.getElementById('page-week').classList.contains('active')) renderWeek();
+  if(document.getElementById('page-badge').classList.contains('active')) renderBadges();
 }
 
 // ── ページ切替 ────────────────────────────────
 function showPage(p){
-  ['entry','summary','cal','year'].forEach(n=>{
+  ['entry','summary','cal','year','week','badge'].forEach(n=>{
     document.getElementById('page-'+n).classList.toggle('active',n===p);
-    document.getElementById('nav-'+n).classList.toggle('active',n===p);
+    const nav=document.getElementById('nav-'+n);
+    if(nav) nav.classList.toggle('active',n===p);
   });
   if(p==='summary') renderSummary();
   if(p==='cal')     renderCal();
   if(p==='year')    renderYear();
+  if(p==='week')    renderWeek();
+  if(p==='badge')   renderBadges();
 }
 
 // ── 前日・翌日 ────────────────────────────────
@@ -886,7 +937,9 @@ function renderSummary(){
     <div class="section-title">月間目標</div>
     <div class="goal-section">
       <div class="goal-header"><span>${month.replace('-','年')}月の目標</span><span class="goal-pct">${goalAmt?goalPct+'%':'未設定'}</span></div>
-      ${goalAmt?`<div class="goal-bar-bg"><div class="goal-bar-fill${goalPct>=100?' over':''}" style="width:${Math.min(goalPct,100)}%"></div></div><div class="goal-sub"><span>¥${curS.toLocaleString()} / ¥${goalAmt.toLocaleString()}</span><span>残り¥${Math.max(goalAmt-curS,0).toLocaleString()}</span></div>`:'<div style="font-size:12px;color:var(--text2);margin-bottom:8px">目標金額を設定してください</div>'}
+      ${goalAmt?`<div class="goal-bar-bg"><div class="goal-bar-fill${goalPct>=100?' over':''}" style="width:${Math.min(goalPct,100)}%"></div></div><div class="goal-sub"><span>¥${curS.toLocaleString()} / ¥${goalAmt.toLocaleString()}</span><span>残り¥${Math.max(goalAmt-curS,0).toLocaleString()}</span></div>
+      ${goalPct<100&&dailyAvg>0?`<div class="goal-forecast">📅 このペースだと${(()=>{const remain=goalAmt-curS;const daysNeeded=Math.ceil(remain/dailyAvg);const d=new Date();d.setDate(d.getDate()+daysNeeded);return `${d.getMonth()+1}/${d.getDate()}（あと${daysNeeded}日）`})()}に達成見込み</div>`:''}
+      ${goalPct>=100?'<div class="goal-forecast" style="background:rgba(6,193,103,0.1);border-color:var(--uber);color:var(--uber)">🎉 今月の目標を達成しました！</div>':''}`:'<div style="font-size:12px;color:var(--text2);margin-bottom:8px">目標金額を設定してください</div>'}
       <div class="goal-input-row"><label>目標額</label><input type="number" id="inp-goal" value="${goalAmt||''}" placeholder="200000" inputmode="numeric"></div>
     </div>
     <div class="section-title">収支管理</div>
@@ -1080,6 +1133,176 @@ function renderYear(){
   }));
 }
 
+// ── カウントアップタイマー ────────────────────
+function startCountup(){
+  stopCountup();
+  const el=document.getElementById('countup-timer');
+  if(!el) return;
+  countupInterval=setInterval(()=>{
+    const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
+    if(!inSession){ stopCountup(); return; }
+    const last=sessions[sessions.length-1];
+    const[dh,dm]=last.depart.split(':').map(Number);
+    const now=new Date();
+    const nowMins=now.getHours()*60+now.getMinutes();
+    const diff=nowMins-(dh*60+dm);
+    if(diff<0){ stopCountup(); return; }
+    const h=Math.floor(diff/60), m=diff%60;
+    el.textContent=`🚀 ${h>0?h+'h':''}${String(m).padStart(2,'0')}m 経過`;
+    el.style.display='inline';
+  }, 10000); // 10秒ごとに更新
+  // 即時実行
+  const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
+  if(inSession){
+    const last=sessions[sessions.length-1];
+    const[dh,dm]=last.depart.split(':').map(Number);
+    const now=new Date(), nowMins=now.getHours()*60+now.getMinutes();
+    const diff=Math.max(0,nowMins-(dh*60+dm));
+    const h=Math.floor(diff/60), m=diff%60;
+    el.textContent=`🚀 ${h>0?h+'h':''}${String(m).padStart(2,'0')}m 経過`;
+    el.style.display='inline';
+  }
+}
+function stopCountup(){
+  clearInterval(countupInterval);
+  countupInterval=null;
+  const el=document.getElementById('countup-timer');
+  if(el) el.style.display='none';
+}
+
+// ── 週次ページ ────────────────────────────────
+function getWeekDates(offset){
+  const now=new Date();
+  const day=now.getDay(); // 0=日
+  const monday=new Date(now); monday.setDate(now.getDate()-((day+6)%7)+offset*7);
+  return Array.from({length:7},(_,i)=>{
+    const d=new Date(monday); d.setDate(monday.getDate()+i);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  });
+}
+
+function renderWeek(){
+  const dates=getWeekDates(weekOffset);
+  const start=dates[0], end=dates[6];
+  document.getElementById('week-label').textContent=
+    `${start.slice(5).replace('-','/')} 〜 ${end.slice(5).replace('-','/')}`;
+  const today=todayStr();
+  const wf=dates.map(d=>records.find(r=>r.date===d)||{date:d,uber:{sales:0,count:0},demae:{sales:0,count:0},rocket:{sales:0,count:0},weather:'sunny'});
+  const weekS=wf.reduce((s,r)=>s+totalOf(r),0);
+  const weekC=wf.reduce((s,r)=>s+countOf(r),0);
+  const activeDays=wf.filter(r=>totalOf(r)>0).length;
+  const avgDay=activeDays?Math.round(weekS/activeDays):0;
+
+  // 先週比較
+  const prevDates=getWeekDates(weekOffset-1);
+  const pwf=prevDates.map(d=>records.find(r=>r.date===d)||{date:d,uber:{sales:0,count:0},demae:{sales:0,count:0},rocket:{sales:0,count:0}});
+  const prevWeekS=pwf.reduce((s,r)=>s+totalOf(r),0);
+
+  // 先月同週比較
+  const prevMonthDates=dates.map(d=>{
+    const[y,m,day]=d.split('-').map(Number);
+    const pm=m===1?12:m-1, py=m===1?y-1:y;
+    return `${py}-${String(pm).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  });
+  const pmwf=prevMonthDates.map(d=>records.find(r=>r.date===d)||{date:d,uber:{sales:0,count:0},demae:{sales:0,count:0},rocket:{sales:0,count:0}});
+  const prevMonthWeekS=pmwf.reduce((s,r)=>s+totalOf(r),0);
+
+  const maxDay=Math.max(...wf.map(r=>totalOf(r)),1);
+  const dayRows=wf.map((r,i)=>{
+    const t=totalOf(r), dow=DAYS[new Date(r.date+'T00:00:00').getDay()];
+    const isToday=r.date===today;
+    const barW=Math.round(t/maxDay*100);
+    // 先月同日
+    const pmRec=records.find(rec=>rec.date===prevMonthDates[i]);
+    const pmT=pmRec?totalOf(pmRec):0;
+    const diffStr=pmT>0?(t>pmT?`<span class="up">▲${Math.round((t-pmT)/pmT*100)}%</span>`:`<span class="down">▼${Math.round((pmT-t)/pmT*100)}%</span>`):'';
+    return `<div class="week-day-row${isToday?' today':''}">
+      <span class="wdr-dow" style="color:${i===6?'#E91E63':i===5?'#4A90D9':'var(--text)'}">${dow}</span>
+      <span class="wdr-date">${r.date.slice(5).replace('-','/')}</span>
+      <div class="wdr-bar-wrap"><div class="wdr-bar" style="width:${barW}%"></div></div>
+      <span class="wdr-sales" style="color:${t>0?'var(--uber)':'var(--text3)'}">${t>0?'¥'+t.toLocaleString():'--'}</span>
+      <span class="wdr-diff">${diffStr}</span>
+    </div>`;
+  }).join('');
+
+  const diffPrevWeek=prevWeekS>0?Math.round((weekS-prevWeekS)/prevWeekS*100):null;
+  const diffPrevMonth=prevMonthWeekS>0?Math.round((weekS-prevMonthWeekS)/prevMonthWeekS*100):null;
+
+  document.getElementById('week-content').innerHTML=`
+    <div class="week-stat-grid">
+      <div class="stat-card"><div class="slabel">今週の売上</div><div class="sval">¥${weekS.toLocaleString()}</div>
+        <div class="sdiff">
+          ${diffPrevWeek!==null?(diffPrevWeek>0?`<span class="up">▲${diffPrevWeek}% 先週比</span>`:`<span class="down">▼${Math.abs(diffPrevWeek)}% 先週比</span>`):'<span class="neu">-- 先週比</span>'}
+          ${diffPrevMonth!==null?(diffPrevMonth>0?`<span class="up">▲${diffPrevMonth}% 先月同週比</span>`:`<span class="down">▼${Math.abs(diffPrevMonth)}% 先月同週比</span>`):'<span class="neu">-- 先月同週比</span>'}
+        </div>
+      </div>
+      <div class="stat-card"><div class="slabel">稼働日 / 件数</div><div class="sval">${activeDays}日 / ${weekC}件</div><div class="sdiff neu">日平均¥${avgDay.toLocaleString()}</div></div>
+    </div>
+    <div class="week-day-list">${dayRows}</div>
+    <div style="position:relative;width:100%;height:160px"><canvas id="chart-week"></canvas></div>
+  `;
+
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    drawChart('chart-week','bar',
+      {labels:wf.map(r=>DAYS[new Date(r.date+'T00:00:00').getDay()]),
+       datasets:[
+         {label:'今週',data:wf.map(r=>totalOf(r)),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
+         {label:'先月同週',data:pmwf.map(r=>totalOf(r)),backgroundColor:'rgba(155,155,155,.4)',borderColor:'#999',borderWidth:1}
+       ]},
+      {responsive:true,maintainAspectRatio:false,
+       plugins:{legend:{labels:{font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},
+       scales:{x:{ticks:{font:{size:11}}},y:{ticks:{callback:v=>`¥${(v/1000).toFixed(0)}k`,font:{size:10}}}}}
+    );
+  }));
+}
+
+// ── バッジ定義・描画 ──────────────────────────
+function renderBadges(){
+  const allS=records.reduce((s,r)=>s+totalOf(r),0);
+  const allDays=records.filter(r=>totalOf(r)>0).length;
+  const allH=records.reduce((s,r)=>s+hoursOf(r),0);
+  const avgHourly=allH>0?Math.round(allS/allH):0;
+  const maxDay=records.reduce((mx,r)=>Math.max(mx,totalOf(r)),0);
+  const monthSales={};
+  records.forEach(r=>{const m=r.date.slice(0,7);monthSales[m]=(monthSales[m]||0)+totalOf(r);});
+  const maxMonth=Math.max(...Object.values(monthSales),0);
+  let streak=0;
+  for(let i=0;;i++){const d=new Date();d.setDate(d.getDate()-i);const ds=todayStr().slice(0,8).replace(/\d{2}$/,String(d.getDate()).padStart(2,'0'));const dd=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;if(records.find(r=>r.date===dd&&totalOf(r)>0))streak++;else break;}
+
+  // セッション記録数（帰宅あり）
+  const completedSessions=records.reduce((s,r)=>(r.sessions||[]).filter(ss=>ss.depart&&ss.return).length+s,0);
+
+  const badges=[
+    {icon:'🚀',name:'初稼働',desc:'初めてデータを記録',unlocked:allDays>=1},
+    {icon:'📅',name:'7日連続',desc:'7日間連続稼働',unlocked:streak>=7},
+    {icon:'📅',name:'30日連続',desc:'30日間連続稼働',unlocked:streak>=30},
+    {icon:'💴',name:'月5万達成',desc:'1ヶ月で5万円以上',unlocked:maxMonth>=50000},
+    {icon:'💴',name:'月10万達成',desc:'1ヶ月で10万円以上',unlocked:maxMonth>=100000},
+    {icon:'💴',name:'月15万達成',desc:'1ヶ月で15万円以上',unlocked:maxMonth>=150000},
+    {icon:'⭐',name:'日2万超え',desc:'1日で2万円以上',unlocked:maxDay>=20000},
+    {icon:'⭐',name:'日3万超え',desc:'1日で3万円以上',unlocked:maxDay>=30000},
+    {icon:'⏱️',name:'時給2000円',desc:'平均時給2000円以上',unlocked:avgHourly>=2000},
+    {icon:'⏱️',name:'時給3000円',desc:'平均時給3000円以上',unlocked:avgHourly>=3000},
+    {icon:'🏆',name:'累計100日',desc:'累計稼働100日以上',unlocked:allDays>=100},
+    {icon:'💎',name:'累計100万円',desc:'累計売上100万円以上',unlocked:allS>=1000000},
+    {icon:'🔧',name:'セッション名人',desc:'出発・帰宅を10回記録',unlocked:completedSessions>=10},
+    {icon:'🌟',name:'オールラウンダー',desc:'3社すべてで稼働',unlocked:records.some(r=>r.uber.sales>0)&&records.some(r=>r.demae.sales>0)&&records.some(r=>r.rocket.sales>0)},
+  ];
+
+  const unlockedCount=badges.filter(b=>b.unlocked).length;
+  document.getElementById('badge-content').innerHTML=`
+    <div style="font-size:13px;color:var(--text2);margin-bottom:14px">${unlockedCount} / ${badges.length} 解除済み</div>
+    <div class="badge-grid">
+      ${badges.map(b=>`<div class="badge-card ${b.unlocked?'unlocked':'locked'}">
+        <div class="badge-icon">${b.icon}</div>
+        <div class="badge-name">${b.name}</div>
+        <div class="badge-desc">${b.desc}</div>
+        ${b.unlocked?'<div style="margin-top:5px;font-size:10px;color:var(--uber)">✓ 解除済み</div>':''}
+      </div>`).join('')}
+    </div>
+  `;
+}
+
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
@@ -1106,7 +1329,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('nav-entry').addEventListener('click',()=>showPage('entry'));
   document.getElementById('nav-summary').addEventListener('click',()=>showPage('summary'));
   document.getElementById('nav-cal').addEventListener('click',()=>showPage('cal'));
-  document.getElementById('nav-year').addEventListener('click',()=>showPage('year'));
+  document.getElementById('nav-week').addEventListener('click',()=>showPage('week'));
+  document.getElementById('nav-badge').addEventListener('click',()=>showPage('badge'));
   document.getElementById('inp-date').addEventListener('change',e=>loadEntryForDate(e.target.value));
 
   // 数値入力：inputでリアルタイム表示更新、changeで自動保存
