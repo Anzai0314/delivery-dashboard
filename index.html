@@ -229,6 +229,22 @@ body{display:flex;flex-direction:column}
 .wdr-diff{font-size:10px;min-width:50px;text-align:right}
 /* 達成予測 */
 .goal-forecast{background:rgba(186,117,23,0.1);border:0.5px solid #BA7517;border-radius:var(--radius);padding:10px 12px;margin-top:8px;font-size:12px;color:#BA7517;font-weight:600}
+/* キャラクター評価 */
+.chara-block{border-radius:var(--radius-lg);padding:14px;margin-bottom:14px;background:linear-gradient(135deg,rgba(255,182,193,0.15),rgba(255,105,180,0.08));border:0.5px solid rgba(255,105,180,0.3)}
+.chara-inner{display:flex;align-items:flex-end;gap:12px}
+.chara-svg{flex-shrink:0;width:72px;height:72px}
+.chara-bubble{flex:1;background:var(--bg);border-radius:12px 12px 12px 4px;padding:10px 12px;border:0.5px solid var(--border);position:relative;min-height:52px}
+.chara-bubble::before{content:'';position:absolute;left:-7px;bottom:12px;border:4px solid transparent;border-right-color:var(--border)}
+.chara-bubble::after{content:'';position:absolute;left:-5px;bottom:13px;border:3px solid transparent;border-right-color:var(--bg)}
+.chara-text{font-size:13px;line-height:1.6;color:var(--text)}
+.chara-name{font-size:10px;color:rgba(255,105,180,0.9);font-weight:700;margin-bottom:4px}
+.chara-btn{margin-top:10px;width:100%;padding:9px;border-radius:var(--radius);background:rgba(255,105,180,0.12);border:0.5px solid rgba(255,105,180,0.4);color:rgba(255,105,180,1);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.chara-btn:active{opacity:.7}
+.dot-anim{display:flex;align-items:center;gap:3px;padding:4px 0}
+.dot-anim span{width:6px;height:6px;border-radius:50%;background:rgba(255,105,180,0.6);display:inline-block;animation:dotbounce 1.2s infinite}
+.dot-anim span:nth-child(2){animation-delay:.2s}
+.dot-anim span:nth-child(3){animation-delay:.4s}
+@keyframes dotbounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1}
 </style>
@@ -882,6 +898,17 @@ function renderSummary(){
   const today2=new Date();
   const passed=today2.toISOString().slice(0,7)===month?today2.getDate():totalDays;
   const dailyAvg=curS/(passed||1);
+
+  // ── ペース比較（今月○日時点 vs 先月同日時点）──
+  const todayDay = today2.toISOString().slice(0,7)===month ? today2.getDate() : totalDays;
+  // 今月の todayDay 日まで（1〜todayDay）の売上合計
+  const curPace = f.filter(r=>+r.date.slice(8)<=todayDay).reduce((s,r)=>s+totalOf(r),0);
+  // 先月の同じ日まで（1〜todayDay）の売上合計
+  const prevPace = pf.filter(r=>+r.date.slice(8)<=todayDay).reduce((s,r)=>s+totalOf(r),0);
+  const paceDiff = curPace - prevPace;
+  const pacePct = prevPace>0 ? Math.round(paceDiff/prevPace*100) : null;
+  // 先月の月末最終売上（先月全体）
+  const prevMonthTotal = prevS;
   const estPayout=Math.round(dailyAvg*totalDays);
   const curExp=expenses[month]||0;
   const netProfit=curS-curExp;
@@ -934,6 +961,73 @@ function renderSummary(){
 
   const labels=f.map(r=>r.date.slice(8)+'日');
   document.getElementById('summary-content').innerHTML=`
+    <div class="chara-block" id="chara-block">
+      <div class="chara-inner">
+        <svg class="chara-svg" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+          <!-- 体 -->
+          <ellipse cx="36" cy="54" rx="16" ry="12" fill="#FFB7D5"/>
+          <!-- 腕 -->
+          <ellipse cx="18" cy="50" rx="5" ry="9" fill="#FFB7D5" transform="rotate(-20,18,50)"/>
+          <ellipse cx="54" cy="50" rx="5" ry="9" fill="#FFB7D5" transform="rotate(20,54,50)"/>
+          <!-- 頭 -->
+          <circle cx="36" cy="28" r="18" fill="#FFDDE8"/>
+          <!-- 髪 -->
+          <ellipse cx="36" cy="13" rx="18" ry="8" fill="#FF69B4"/>
+          <ellipse cx="20" cy="22" rx="6" ry="10" fill="#FF69B4"/>
+          <ellipse cx="52" cy="22" rx="6" ry="10" fill="#FF69B4"/>
+          <!-- ツインテール -->
+          <ellipse cx="14" cy="30" rx="5" ry="12" fill="#FF69B4" transform="rotate(-15,14,30)"/>
+          <ellipse cx="58" cy="30" rx="5" ry="12" fill="#FF69B4" transform="rotate(15,58,30)"/>
+          <!-- 目 -->
+          <ellipse cx="29" cy="28" rx="4" ry="4.5" fill="white"/>
+          <ellipse cx="43" cy="28" rx="4" ry="4.5" fill="white"/>
+          <circle cx="30" cy="29" r="2.5" fill="#333"/>
+          <circle cx="44" cy="29" r="2.5" fill="#333"/>
+          <circle cx="31" cy="27.5" r="1" fill="white"/>
+          <circle cx="45" cy="27.5" r="1" fill="white"/>
+          <!-- ほっぺ -->
+          <ellipse cx="23" cy="33" rx="4" ry="2.5" fill="rgba(255,150,150,0.5)"/>
+          <ellipse cx="49" cy="33" rx="4" ry="2.5" fill="rgba(255,150,150,0.5)"/>
+          <!-- 口 id="chara-mouth" -->
+          <path id="chara-mouth" d="M31 36 Q36 40 41 36" stroke="#FF69B4" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <!-- リボン -->
+          <polygon points="36,8 30,14 36,12 42,14" fill="#FF1493"/>
+        </svg>
+        <div class="chara-bubble">
+          <div class="chara-name">ミル ✨</div>
+          <div class="chara-text" id="chara-text">「評価」ボタンを押すと今月の成績を教えるね！</div>
+        </div>
+      </div>
+      <button class="chara-btn" id="chara-btn" onclick="requestCharaComment(${JSON.stringify({curS,prevS,goalAmt,goalPct,active:active.length,avgUnit,month})})">
+        <i class="ti ti-sparkles"></i> 今月の評価をしてもらう
+      </button>
+    </div>
+    <div class="section-title">ペース比較（先月同日まで）</div>
+    <div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;background:var(--bg2)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px">
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">今月 ${todayDay}日時点</div>
+          <div style="font-size:22px;font-weight:700;color:var(--uber)">¥${curPace.toLocaleString()}</div>
+        </div>
+        <div style="text-align:center;padding:0 8px">
+          <div style="font-size:${paceDiff===0?'13':paceDiff>0?'15':'15'}px;font-weight:700;color:${paceDiff>0?'var(--up)':paceDiff<0?'var(--down)':'var(--text2)'}">
+            ${paceDiff>0?'▲+¥'+paceDiff.toLocaleString():paceDiff<0?'▼¥'+Math.abs(paceDiff).toLocaleString():'±0'}
+          </div>
+          ${pacePct!==null?`<div style="font-size:11px;color:${paceDiff>0?'var(--up)':paceDiff<0?'var(--down)':'var(--text2)'};margin-top:2px">${paceDiff>0?'+':''}${pacePct}%</div>`:''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">先月 ${todayDay}日時点</div>
+          <div style="font-size:22px;font-weight:700;color:var(--text2)">¥${prevPace.toLocaleString()}</div>
+        </div>
+      </div>
+      <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:8px">
+        <div style="height:100%;border-radius:3px;background:${paceDiff>=0?'var(--uber)':'var(--down)'};width:${Math.min(prevPace>0?Math.round(curPace/prevPace*100):curPace>0?100:0,100)}%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)">
+        <span>先月最終: ¥${prevMonthTotal.toLocaleString()}</span>
+        <span>${prevMonthTotal>0&&curPace>0?`先月比 ${Math.round(curPace/prevMonthTotal*100)}% 消化`:'--'}</span>
+      </div>
+    </div>
     <div class="section-title">月間目標</div>
     <div class="goal-section">
       <div class="goal-header"><span>${month.replace('-','年')}月の目標</span><span class="goal-pct">${goalAmt?goalPct+'%':'未設定'}</span></div>
@@ -1301,6 +1395,59 @@ function renderBadges(){
       </div>`).join('')}
     </div>
   `;
+}
+
+// ── キャラクターAI評価 ────────────────────────
+async function requestCharaComment(stats){
+  const btn=document.getElementById('chara-btn');
+  const textEl=document.getElementById('chara-text');
+  if(!textEl||!btn) return;
+  btn.disabled=true;
+  textEl.innerHTML='<div class="dot-anim"><span></span><span></span><span></span></div>';
+
+  const prevDiff=stats.prevS>0?Math.round((stats.curS-stats.prevS)/stats.prevS*100):null;
+  const prompt=`あなたは「ミル」という元気で明るい女の子のキャラクターです。配達員のユーザーの今月の成績を見て、応援のセリフを言ってください。
+
+【今月の成績】
+- 月間売上: ¥${stats.curS.toLocaleString()}
+- 前月比: ${prevDiff!==null?(prevDiff>0?'▲'+prevDiff+'%アップ':'▼'+Math.abs(prevDiff)+'%ダウン'):'データなし'}
+- 目標達成率: ${stats.goalAmt>0?stats.goalPct+'%':'目標未設定'}
+- 稼働日数: ${stats.active}日
+- 平均単価: ¥${stats.avgUnit.toLocaleString()}
+- 対象月: ${stats.month.replace('-','年')}月
+
+【ルール】
+- 2〜3文の短いセリフ（80文字以内）
+- 「！」や絵文字を使って元気よく
+- 成績が良ければ褒める、悪ければ励ます
+- 具体的な数字に触れる
+- 語尾は「〜だよ！」「〜だね！」「〜しよ！」などカジュアルに
+- セリフだけ返す（説明不要）`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:200,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.[0]?.text||'うまく取得できなかったよ…もう一度試してね！';
+    textEl.textContent=text;
+    // 表情：前月比で変える
+    const mouth=document.getElementById('chara-mouth');
+    if(mouth){
+      if(prevDiff!==null&&prevDiff<-10) mouth.setAttribute('d','M31 38 Q36 35 41 38'); // 困り顔
+      else mouth.setAttribute('d','M31 35 Q36 41 41 35'); // 大笑い
+    }
+  }catch(e){
+    textEl.textContent='ごめんね、うまく話せなかったよ…もう一回押してみて！🙏';
+  }
+  btn.disabled=false;
+  btn.innerHTML='<i class="ti ti-refresh"></i> もう一度評価してもらう';
 }
 
 function showToast(msg){
