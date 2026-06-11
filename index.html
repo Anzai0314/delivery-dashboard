@@ -512,8 +512,12 @@ const WMO={0:'sunny',1:'sunny',2:'cloudy',3:'cloudy',45:'cloudy',48:'cloudy',51:
 
 async function fetchForecast(){
   try{
-    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=38.2688&longitude=140.8721&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=7');
-    renderForecast((await r.json()).daily);
+    const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=38.2688&longitude=140.8721&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo&forecast_days=7');
+    const json=await r.json();
+    const daily=json.daily;
+    // weather_code or weathercode どちらでも対応
+    if(!daily.weather_code&&daily.weathercode) daily.weather_code=daily.weathercode;
+    renderForecast(daily);
   }catch(e){
     document.getElementById('forecast-days').innerHTML='<div style="font-size:12px;color:var(--text2);padding:4px 0">取得失敗</div>';
   }
@@ -530,7 +534,7 @@ function calcExpected(wkey){
 function renderForecast(daily){
   const today=todayStr();
   document.getElementById('forecast-days').innerHTML=daily.time.map((date,i)=>{
-    const wkey=WMO[daily.weathercode[i]]||'cloudy';
+    const wkey=WMO[daily.weather_code[i]]||'cloudy';
     const exp=calcExpected(wkey);
     const expStr=exp?`¥${exp>=10000?(exp/10000).toFixed(1)+'万':exp.toLocaleString()}`:'--';
     const expCls=!exp?'low':exp>=15000?'high':exp>=10000?'mid':'low';
@@ -1397,7 +1401,7 @@ function renderBadges(){
   `;
 }
 
-// ── キャラクターAI評価 ────────────────────────
+// ── キャラクターAI評価（データ連動セリフ生成） ──
 async function requestCharaComment(stats){
   const btn=document.getElementById('chara-btn');
   const textEl=document.getElementById('chara-text');
@@ -1406,45 +1410,64 @@ async function requestCharaComment(stats){
   textEl.innerHTML='<div class="dot-anim"><span></span><span></span><span></span></div>';
 
   const prevDiff=stats.prevS>0?Math.round((stats.curS-stats.prevS)/stats.prevS*100):null;
-  const prompt=`あなたは「ミル」という元気で明るい女の子のキャラクターです。配達員のユーザーの今月の成績を見て、応援のセリフを言ってください。
 
-【今月の成績】
-- 月間売上: ¥${stats.curS.toLocaleString()}
-- 前月比: ${prevDiff!==null?(prevDiff>0?'▲'+prevDiff+'%アップ':'▼'+Math.abs(prevDiff)+'%ダウン'):'データなし'}
-- 目標達成率: ${stats.goalAmt>0?stats.goalPct+'%':'目標未設定'}
-- 稼働日数: ${stats.active}日
-- 平均単価: ¥${stats.avgUnit.toLocaleString()}
-- 対象月: ${stats.month.replace('-','年')}月
+  // データに応じてセリフパターンを選択
+  await new Promise(r=>setTimeout(r,900)); // 考え中の演出
 
-【ルール】
-- 2〜3文の短いセリフ（80文字以内）
-- 「！」や絵文字を使って元気よく
-- 成績が良ければ褒める、悪ければ励ます
-- 具体的な数字に触れる
-- 語尾は「〜だよ！」「〜だね！」「〜しよ！」などカジュアルに
-- セリフだけ返す（説明不要）`;
+  let lines=[];
+  const s=stats.curS, pct=stats.goalPct, days=stats.active;
 
-  try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:200,
-        messages:[{role:'user',content:prompt}]
-      })
-    });
-    const data=await res.json();
-    const text=data.content?.[0]?.text||'うまく取得できなかったよ…もう一度試してね！';
-    textEl.textContent=text;
-    // 表情：前月比で変える
-    const mouth=document.getElementById('chara-mouth');
-    if(mouth){
-      if(prevDiff!==null&&prevDiff<-10) mouth.setAttribute('d','M31 38 Q36 35 41 38'); // 困り顔
-      else mouth.setAttribute('d','M31 35 Q36 41 41 35'); // 大笑い
-    }
-  }catch(e){
-    textEl.textContent='ごめんね、うまく話せなかったよ…もう一回押してみて！🙏';
+  if(s===0){
+    lines=[
+      'まだデータがないね！今月もいっしょに頑張ろ！💪',
+      '数字が入ってないよ〜！売上を入力してね！📝',
+    ];
+  } else if(pct>=100){
+    lines=[
+      `すごい！目標${pct}%達成だよ！¥${s.toLocaleString()}、最高すぎる！🎉`,
+      `目標クリア！¥${s.toLocaleString()}稼いだんだね、本当にかっこいいよ！✨`,
+      `${pct}%達成！もう上限ないじゃん、どこまでいくの〜！🚀`,
+    ];
+  } else if(prevDiff!==null&&prevDiff>=20){
+    lines=[
+      `前月より${prevDiff}%もアップ！¥${s.toLocaleString()}、絶好調だね！🔥`,
+      `先月から${prevDiff}%アップって、すごい成長じゃん！この調子！💫`,
+    ];
+  } else if(prevDiff!==null&&prevDiff<=-15){
+    lines=[
+      `先月より${Math.abs(prevDiff)}%ダウンだけど大丈夫！${days}日も頑張ったじゃん！💪`,
+      `ちょっと落ちてるけど、まだ月途中だよ！ここから巻き返そ！🌟`,
+    ];
+  } else if(s>=150000){
+    lines=[
+      `¥${s.toLocaleString()}ってすごすぎ！プロ配達員だね！🏆`,
+      `${days}日稼働で¥${s.toLocaleString()}！毎日コツコツえらい！✨`,
+    ];
+  } else if(s>=100000){
+    lines=[
+      `10万超えてる！¥${s.toLocaleString()}、すごいじゃん！🎊`,
+      `${days}日で¥${s.toLocaleString()}稼いだんだね、かっこいい！💪`,
+    ];
+  } else if(pct>0&&pct<50){
+    lines=[
+      `目標まで半分以下だけど、${days}日稼働したね！まだまだいけるよ！💨`,
+      `¥${s.toLocaleString()}まで来たよ！目標に向けてファイト！🔥`,
+    ];
+  } else {
+    lines=[
+      `${days}日間お疲れ様！¥${s.toLocaleString()}、しっかり稼いでるよ！👍`,
+      `今月も${days}日頑張ったね！¥${s.toLocaleString()}、積み上げが大事だよ！✨`,
+    ];
+  }
+
+  const text=lines[Math.floor(Math.random()*lines.length)];
+  textEl.textContent=text;
+
+  const mouth=document.getElementById('chara-mouth');
+  if(mouth){
+    if(prevDiff!==null&&prevDiff<-15) mouth.setAttribute('d','M31 38 Q36 35 41 38');
+    else if(pct>=100||s>=100000) mouth.setAttribute('d','M30 34 Q36 42 42 34');
+    else mouth.setAttribute('d','M31 35 Q36 40 41 35');
   }
   btn.disabled=false;
   btn.innerHTML='<i class="ti ti-refresh"></i> もう一度評価してもらう';
