@@ -938,7 +938,7 @@ function renderSummary(){
     <div class="goal-section">
       <div class="goal-header"><span>${month.replace('-','年')}月の目標</span><span class="goal-pct">${goalAmt?goalPct+'%':'未設定'}</span></div>
       ${goalAmt?`<div class="goal-bar-bg"><div class="goal-bar-fill${goalPct>=100?' over':''}" style="width:${Math.min(goalPct,100)}%"></div></div><div class="goal-sub"><span>¥${curS.toLocaleString()} / ¥${goalAmt.toLocaleString()}</span><span>残り¥${Math.max(goalAmt-curS,0).toLocaleString()}</span></div>
-      ${goalPct<100&&dailyAvg>0?`<div class="goal-forecast">📅 このペースだと${(()=>{const remain=goalAmt-curS;const daysNeeded=Math.ceil(remain/dailyAvg);const d=new Date();d.setDate(d.getDate()+daysNeeded);return `${d.getMonth()+1}/${d.getDate()}（あと${daysNeeded}日）`})()}に達成見込み</div>`:''}
+      ${goalPct<100&&dailyAvg>0?`<div class="goal-forecast">${(()=>{const remain=goalAmt-curS;const daysNeeded=Math.ceil(remain/dailyAvg);const d=new Date();d.setDate(d.getDate()+daysNeeded);const forecastMonth=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;return forecastMonth===month?`📅 このペースだと${d.getMonth()+1}/${d.getDate()}（あと${daysNeeded}日）に達成見込み`:'📅 このペースでは今月中の達成は困難です';})()}</div>`:''}
       ${goalPct>=100?'<div class="goal-forecast" style="background:rgba(6,193,103,0.1);border-color:var(--uber);color:var(--uber)">🎉 今月の目標を達成しました！</div>':''}`:'<div style="font-size:12px;color:var(--text2);margin-bottom:8px">目標金額を設定してください</div>'}
       <div class="goal-input-row"><label>目標額</label><input type="number" id="inp-goal" value="${goalAmt||''}" placeholder="200000" inputmode="numeric"></div>
     </div>
@@ -1324,6 +1324,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('btn-cal-next').addEventListener('click',()=>{calOffset++;renderCal();});
   document.getElementById('btn-prev-year').addEventListener('click',()=>{yearOffset--;renderYear();});
   document.getElementById('btn-next-year').addEventListener('click',()=>{yearOffset++;renderYear();});
+  document.getElementById('btn-prev-week').addEventListener('click',()=>{weekOffset--;renderWeek();});
+  document.getElementById('btn-next-week').addEventListener('click',()=>{weekOffset++;renderWeek();});
   document.getElementById('btn-prev-day').addEventListener('click',()=>changeDay(-1));
   document.getElementById('btn-next-day').addEventListener('click',()=>changeDay(1));
   document.getElementById('nav-entry').addEventListener('click',()=>showPage('entry'));
