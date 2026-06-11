@@ -229,22 +229,8 @@ body{display:flex;flex-direction:column}
 .wdr-diff{font-size:10px;min-width:50px;text-align:right}
 /* 達成予測 */
 .goal-forecast{background:rgba(186,117,23,0.1);border:0.5px solid #BA7517;border-radius:var(--radius);padding:10px 12px;margin-top:8px;font-size:12px;color:#BA7517;font-weight:600}
-/* キャラクター評価 */
-.chara-block{border-radius:var(--radius-lg);padding:14px;margin-bottom:14px;background:linear-gradient(135deg,rgba(255,182,193,0.15),rgba(255,105,180,0.08));border:0.5px solid rgba(255,105,180,0.3)}
-.chara-inner{display:flex;align-items:flex-end;gap:12px}
-.chara-svg{flex-shrink:0;width:72px;height:72px}
-.chara-bubble{flex:1;background:var(--bg);border-radius:12px 12px 12px 4px;padding:10px 12px;border:0.5px solid var(--border);position:relative;min-height:52px}
-.chara-bubble::before{content:'';position:absolute;left:-7px;bottom:12px;border:4px solid transparent;border-right-color:var(--border)}
-.chara-bubble::after{content:'';position:absolute;left:-5px;bottom:13px;border:3px solid transparent;border-right-color:var(--bg)}
-.chara-text{font-size:13px;line-height:1.6;color:var(--text)}
-.chara-name{font-size:10px;color:rgba(255,105,180,0.9);font-weight:700;margin-bottom:4px}
-.chara-btn{margin-top:10px;width:100%;padding:9px;border-radius:var(--radius);background:rgba(255,105,180,0.12);border:0.5px solid rgba(255,105,180,0.4);color:rgba(255,105,180,1);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
-.chara-btn:active{opacity:.7}
-.dot-anim{display:flex;align-items:center;gap:3px;padding:4px 0}
-.dot-anim span{width:6px;height:6px;border-radius:50%;background:rgba(255,105,180,0.6);display:inline-block;animation:dotbounce 1.2s infinite}
-.dot-anim span:nth-child(2){animation-delay:.2s}
-.dot-anim span:nth-child(3){animation-delay:.4s}
-@keyframes dotbounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+/* 予測カード */
+.pred-factors{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1}
 </style>
@@ -522,25 +508,111 @@ async function fetchForecast(){
     document.getElementById('forecast-days').innerHTML='<div style="font-size:12px;color:var(--text2);padding:4px 0">取得失敗</div>';
   }
 }
+// ── 売上予測エンジン（2026年1月以降のデータ基準）──
+const BASE_DATE = '2026-01-01';
+
+function calcPrediction(targetDate){
+  // 2026年1月以降の稼働日データのみ使用
+  const base = records.filter(r => r.date >= BASE_DATE && totalOf(r) > 0);
+  if(base.length < 3) return null; // データ不足
+
+  const dow = new Date(targetDate + 'T00:00:00').getDay();
+  const wkey = (() => {
+    // targetDateが今日なら入力中の天気、予報日なら予報から
+    const today = todayStr();
+    if(targetDate === today){
+      const el = document.getElementById('inp-weather');
+      return el ? el.value : 'sunny';
+    }
+    return null; // 呼び出し元で渡す
+  })();
+
+  return calcPredictionWith(base, dow, wkey);
+}
+
+function calcPredictionWith(base, dow, wkey){
+  if(base.length < 3) return null;
+
+  // ① 全体の平均単価・件数
+  const totalSales = base.reduce((s,r) => s+totalOf(r), 0);
+  const totalCount = base.reduce((s,r) => s+countOf(r), 0);
+  const avgUnit    = totalCount > 0 ? totalSales / totalCount : 0;
+  const avgCount   = totalCount / base.length;
+  const baseAvg    = totalSales / base.length;
+
+  // ② 曜日係数（その曜日の平均 / 全体平均）
+  const dowData = base.filter(r => new Date(r.date+'T00:00:00').getDay() === dow);
+  const dowAvg  = dowData.length > 0
+    ? dowData.reduce((s,r) => s+totalOf(r), 0) / dowData.length
+    : baseAvg;
+  const dowRatio = baseAvg > 0 ? dowAvg / baseAvg : 1;
+
+  // ③ 天気係数（その天気の平均 / 全体平均）
+  let wRatio = 1;
+  if(wkey){
+    const wData = base.filter(r => (r.weather||'sunny') === wkey);
+    if(wData.length >= 2){
+      const wAvg = wData.reduce((s,r) => s+totalOf(r), 0) / wData.length;
+      wRatio = baseAvg > 0 ? wAvg / baseAvg : 1;
+    } else {
+      // データ不足時は固定比率
+      const fallback = {sunny:0.92, cloudy:1.0, rainy:1.18, 'heavy-rain':1.32, snowy:1.08};
+      wRatio = fallback[wkey] || 1;
+    }
+  }
+
+  // ④ 直近トレンド（直近2週間 vs 全体）
+  const twoWeeksAgo = new Date(); twoWeeksAgo.setDate(twoWeeksAgo.getDate()-14);
+  const twoWeeksStr = twoWeeksAgo.toISOString().slice(0,10);
+  const recent = base.filter(r => r.date >= twoWeeksStr);
+  let trendRatio = 1;
+  if(recent.length >= 3){
+    const recentAvg = recent.reduce((s,r) => s+totalOf(r), 0) / recent.length;
+    trendRatio = baseAvg > 0 ? (recentAvg / baseAvg * 0.3 + 0.7) : 1; // 30%だけトレンドを反映
+  }
+
+  // ⑤ 予測 = 基準平均 × 曜日係数 × 天気係数 × トレンド係数
+  const predicted = Math.round(baseAvg * dowRatio * wRatio * trendRatio / 100) * 100;
+
+  return {
+    predicted,
+    baseAvg: Math.round(baseAvg),
+    dowAvg:  Math.round(dowAvg),
+    dowRatio: Math.round(dowRatio * 100),
+    wRatio:  Math.round(wRatio * 100),
+    baseDays: base.length,
+    avgUnit:  Math.round(avgUnit),
+    avgCount: Math.round(avgCount * 10) / 10,
+  };
+}
+
 function calcExpected(wkey){
-  const hits=records.filter(r=>(r.weather||'sunny')===wkey&&totalOf(r)>0);
-  if(hits.length>=2) return Math.round(hits.reduce((s,r)=>s+totalOf(r),0)/hits.length);
-  const all=records.filter(r=>totalOf(r)>0);
-  if(!all.length) return null;
-  const base=Math.round(all.reduce((s,r)=>s+totalOf(r),0)/all.length);
-  const ratio={sunny:0.9,cloudy:1.0,rainy:1.2,'heavy-rain':1.35,snowy:1.1};
-  return Math.round(base*(ratio[wkey]||1));
+  // 天気予報バナー用（簡易版）
+  const base = records.filter(r => r.date >= BASE_DATE && totalOf(r) > 0);
+  if(base.length < 3){
+    // データ不足時は旧来の比率方式
+    const all = records.filter(r => totalOf(r) > 0);
+    if(!all.length) return null;
+    const avg = Math.round(all.reduce((s,r) => s+totalOf(r), 0) / all.length);
+    const ratio = {sunny:0.92, cloudy:1.0, rainy:1.18, 'heavy-rain':1.32, snowy:1.08};
+    return Math.round(avg * (ratio[wkey]||1));
+  }
+  const result = calcPredictionWith(base, null, wkey);
+  return result ? result.predicted : null;
 }
 function renderForecast(daily){
   const today=todayStr();
   document.getElementById('forecast-days').innerHTML=daily.time.map((date,i)=>{
     const wkey=WMO[daily.weather_code[i]]||'cloudy';
-    const exp=calcExpected(wkey);
+    const dow=new Date(date+'T00:00:00').getDay();
+    const base2026=records.filter(r=>r.date>=BASE_DATE&&totalOf(r)>0);
+    const pred=calcPredictionWith(base2026, dow, wkey);
+    const exp=pred?pred.predicted:calcExpected(wkey);
     const expStr=exp?`¥${exp>=10000?(exp/10000).toFixed(1)+'万':exp.toLocaleString()}`:'--';
     const expCls=!exp?'low':exp>=15000?'high':exp>=10000?'mid':'low';
-    const dow=DAYS[new Date(date+'T00:00:00').getDay()];
+    const dowLabel=DAYS[dow];
     return `<div class="forecast-day${date===today?' today':''}">
-      <div class="fd-date">${date.slice(5).replace('-','/')}(${dow})</div>
+      <div class="fd-date">${date.slice(5).replace('-','/')}(${dowLabel})</div>
       <div class="fd-icon">${wmapS[wkey]}</div>
       <div class="fd-temp">${Math.round(daily.temperature_2m_min[i])}°/${Math.round(daily.temperature_2m_max[i])}°</div>
       <div class="fd-expect ${expCls}">${expStr}</div>
@@ -964,48 +1036,48 @@ function renderSummary(){
   }).join('');
 
   const labels=f.map(r=>r.date.slice(8)+'日');
+  // ── 今日の予測計算 ──
+  const todayRec = records.find(r => r.date === todayStr());
+  const todayDow = new Date(todayStr()+'T00:00:00').getDay();
+  const todayWeather = todayRec ? (todayRec.weather||'sunny') : 'sunny';
+  const base2026 = records.filter(r => r.date >= BASE_DATE && totalOf(r) > 0);
+  const todayPred = calcPredictionWith(base2026, todayDow, todayWeather);
+  const todayActual = todayRec ? totalOf(todayRec) : null;
+
   document.getElementById('summary-content').innerHTML=`
-    <div class="chara-block" id="chara-block">
-      <div class="chara-inner">
-        <svg class="chara-svg" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
-          <!-- 体 -->
-          <ellipse cx="36" cy="54" rx="16" ry="12" fill="#FFB7D5"/>
-          <!-- 腕 -->
-          <ellipse cx="18" cy="50" rx="5" ry="9" fill="#FFB7D5" transform="rotate(-20,18,50)"/>
-          <ellipse cx="54" cy="50" rx="5" ry="9" fill="#FFB7D5" transform="rotate(20,54,50)"/>
-          <!-- 頭 -->
-          <circle cx="36" cy="28" r="18" fill="#FFDDE8"/>
-          <!-- 髪 -->
-          <ellipse cx="36" cy="13" rx="18" ry="8" fill="#FF69B4"/>
-          <ellipse cx="20" cy="22" rx="6" ry="10" fill="#FF69B4"/>
-          <ellipse cx="52" cy="22" rx="6" ry="10" fill="#FF69B4"/>
-          <!-- ツインテール -->
-          <ellipse cx="14" cy="30" rx="5" ry="12" fill="#FF69B4" transform="rotate(-15,14,30)"/>
-          <ellipse cx="58" cy="30" rx="5" ry="12" fill="#FF69B4" transform="rotate(15,58,30)"/>
-          <!-- 目 -->
-          <ellipse cx="29" cy="28" rx="4" ry="4.5" fill="white"/>
-          <ellipse cx="43" cy="28" rx="4" ry="4.5" fill="white"/>
-          <circle cx="30" cy="29" r="2.5" fill="#333"/>
-          <circle cx="44" cy="29" r="2.5" fill="#333"/>
-          <circle cx="31" cy="27.5" r="1" fill="white"/>
-          <circle cx="45" cy="27.5" r="1" fill="white"/>
-          <!-- ほっぺ -->
-          <ellipse cx="23" cy="33" rx="4" ry="2.5" fill="rgba(255,150,150,0.5)"/>
-          <ellipse cx="49" cy="33" rx="4" ry="2.5" fill="rgba(255,150,150,0.5)"/>
-          <!-- 口 id="chara-mouth" -->
-          <path id="chara-mouth" d="M31 36 Q36 40 41 36" stroke="#FF69B4" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-          <!-- リボン -->
-          <polygon points="36,8 30,14 36,12 42,14" fill="#FF1493"/>
-        </svg>
-        <div class="chara-bubble">
-          <div class="chara-name">ミル ✨</div>
-          <div class="chara-text" id="chara-text">「評価」ボタンを押すと今月の成績を教えるね！</div>
+    ${todayPred ? `
+    <div class="section-title">今日の売上予測（${todayStr().slice(5).replace('-','/')} ${DAYS[todayDow]}曜・${wmap[todayWeather]}）</div>
+    <div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;background:var(--bg2)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">予測売上</div>
+          <div style="font-size:28px;font-weight:700;color:#BA7517">¥${todayPred.predicted.toLocaleString()}</div>
+        </div>
+        <div style="text-align:right">
+          ${todayActual !== null ? `
+          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">実績</div>
+          <div style="font-size:20px;font-weight:700;color:${todayActual>=todayPred.predicted?'var(--uber)':'var(--text)'}">¥${todayActual.toLocaleString()}</div>
+          <div style="font-size:11px;margin-top:2px;color:${todayActual>=todayPred.predicted?'var(--up)':'var(--down)'}">
+            ${todayActual>=todayPred.predicted?'▲':'▼'}¥${Math.abs(todayActual-todayPred.predicted).toLocaleString()}
+          </div>` : '<div style="font-size:11px;color:var(--text2)">まだ実績なし</div>'}
         </div>
       </div>
-      <button class="chara-btn" id="chara-btn" onclick="requestCharaComment(${JSON.stringify({curS,prevS,goalAmt,goalPct,active:active.length,avgUnit,month})})">
-        <i class="ti ti-sparkles"></i> 今月の評価をしてもらう
-      </button>
-    </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+        <div style="background:var(--bg);border-radius:var(--radius);padding:7px;text-align:center">
+          <div style="font-size:10px;color:var(--text2);margin-bottom:2px">曜日係数</div>
+          <div style="font-size:13px;font-weight:700">${todayPred.dowRatio}%</div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--radius);padding:7px;text-align:center">
+          <div style="font-size:10px;color:var(--text2);margin-bottom:2px">天気係数</div>
+          <div style="font-size:13px;font-weight:700">${todayPred.wRatio}%</div>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--radius);padding:7px;text-align:center">
+          <div style="font-size:10px;color:var(--text2);margin-bottom:2px">予測件数</div>
+          <div style="font-size:13px;font-weight:700">${todayPred.avgCount}件</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:8px">※ 2026年1月以降の${todayPred.baseDays}日分のデータを基準に算出</div>
+    </div>` : ''}
     <div class="section-title">ペース比較（先月同日まで）</div>
     <div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;background:var(--bg2)">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px">
@@ -1399,78 +1471,6 @@ function renderBadges(){
       </div>`).join('')}
     </div>
   `;
-}
-
-// ── キャラクターAI評価（データ連動セリフ生成） ──
-async function requestCharaComment(stats){
-  const btn=document.getElementById('chara-btn');
-  const textEl=document.getElementById('chara-text');
-  if(!textEl||!btn) return;
-  btn.disabled=true;
-  textEl.innerHTML='<div class="dot-anim"><span></span><span></span><span></span></div>';
-
-  const prevDiff=stats.prevS>0?Math.round((stats.curS-stats.prevS)/stats.prevS*100):null;
-
-  // データに応じてセリフパターンを選択
-  await new Promise(r=>setTimeout(r,900)); // 考え中の演出
-
-  let lines=[];
-  const s=stats.curS, pct=stats.goalPct, days=stats.active;
-
-  if(s===0){
-    lines=[
-      'まだデータがないね！今月もいっしょに頑張ろ！💪',
-      '数字が入ってないよ〜！売上を入力してね！📝',
-    ];
-  } else if(pct>=100){
-    lines=[
-      `すごい！目標${pct}%達成だよ！¥${s.toLocaleString()}、最高すぎる！🎉`,
-      `目標クリア！¥${s.toLocaleString()}稼いだんだね、本当にかっこいいよ！✨`,
-      `${pct}%達成！もう上限ないじゃん、どこまでいくの〜！🚀`,
-    ];
-  } else if(prevDiff!==null&&prevDiff>=20){
-    lines=[
-      `前月より${prevDiff}%もアップ！¥${s.toLocaleString()}、絶好調だね！🔥`,
-      `先月から${prevDiff}%アップって、すごい成長じゃん！この調子！💫`,
-    ];
-  } else if(prevDiff!==null&&prevDiff<=-15){
-    lines=[
-      `先月より${Math.abs(prevDiff)}%ダウンだけど大丈夫！${days}日も頑張ったじゃん！💪`,
-      `ちょっと落ちてるけど、まだ月途中だよ！ここから巻き返そ！🌟`,
-    ];
-  } else if(s>=150000){
-    lines=[
-      `¥${s.toLocaleString()}ってすごすぎ！プロ配達員だね！🏆`,
-      `${days}日稼働で¥${s.toLocaleString()}！毎日コツコツえらい！✨`,
-    ];
-  } else if(s>=100000){
-    lines=[
-      `10万超えてる！¥${s.toLocaleString()}、すごいじゃん！🎊`,
-      `${days}日で¥${s.toLocaleString()}稼いだんだね、かっこいい！💪`,
-    ];
-  } else if(pct>0&&pct<50){
-    lines=[
-      `目標まで半分以下だけど、${days}日稼働したね！まだまだいけるよ！💨`,
-      `¥${s.toLocaleString()}まで来たよ！目標に向けてファイト！🔥`,
-    ];
-  } else {
-    lines=[
-      `${days}日間お疲れ様！¥${s.toLocaleString()}、しっかり稼いでるよ！👍`,
-      `今月も${days}日頑張ったね！¥${s.toLocaleString()}、積み上げが大事だよ！✨`,
-    ];
-  }
-
-  const text=lines[Math.floor(Math.random()*lines.length)];
-  textEl.textContent=text;
-
-  const mouth=document.getElementById('chara-mouth');
-  if(mouth){
-    if(prevDiff!==null&&prevDiff<-15) mouth.setAttribute('d','M31 38 Q36 35 41 38');
-    else if(pct>=100||s>=100000) mouth.setAttribute('d','M30 34 Q36 42 42 34');
-    else mouth.setAttribute('d','M31 35 Q36 40 41 35');
-  }
-  btn.disabled=false;
-  btn.innerHTML='<i class="ti ti-refresh"></i> もう一度評価してもらう';
 }
 
 function showToast(msg){
