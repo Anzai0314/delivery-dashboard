@@ -31,9 +31,9 @@ body{display:flex;flex-direction:column}
 .page{display:none;padding:16px}
 .page.active{display:block}
 .bottom-nav{display:flex;border-top:0.5px solid var(--border);background:var(--bg);padding:6px 0 max(2px,env(safe-area-inset-bottom));position:fixed;bottom:0;left:0;right:0}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;cursor:pointer;border:none;background:none;color:var(--text2);font-size:10px;border-radius:var(--radius)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;cursor:pointer;border:none;background:none;color:var(--text2);font-size:9px;border-radius:var(--radius)}
 .nav-item.active{color:var(--text)}
-.nav-item i{font-size:20px}
+.nav-item i{font-size:18px}
 
 /* 天気予報 */
 .weather-forecast{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px;margin-bottom:14px;background:var(--bg2)}
@@ -397,6 +397,7 @@ body{display:flex;flex-direction:column}
   <button class="nav-item" id="nav-summary"><i class="ti ti-chart-bar"></i>分析</button>
   <button class="nav-item" id="nav-week"><i class="ti ti-calendar-week"></i>週次</button>
   <button class="nav-item" id="nav-cal"><i class="ti ti-calendar"></i>暦</button>
+  <button class="nav-item" id="nav-year"><i class="ti ti-calendar-stats"></i>年間</button>
   <button class="nav-item" id="nav-badge"><i class="ti ti-mood-smile"></i>ミル</button>
 </div>
 
@@ -1656,6 +1657,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('nav-summary').addEventListener('click',()=>showPage('summary'));
   document.getElementById('nav-cal').addEventListener('click',()=>showPage('cal'));
   document.getElementById('nav-week').addEventListener('click',()=>showPage('week'));
+  document.getElementById('nav-year').addEventListener('click',()=>showPage('year'));
   document.getElementById('nav-badge').addEventListener('click',()=>showPage('badge'));
   document.getElementById('inp-date').addEventListener('change',e=>loadEntryForDate(e.target.value));
 
