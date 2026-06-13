@@ -939,6 +939,59 @@ function exportCSV(year){
 }
 
 // ── diffHtml ──────────────────────────────────
+// ── 時間帯別時給（セッション比例配分） ────────
+const TIME_SLOTS = [
+  { key:'morning', label:'☀️ 朝',    start:6,  end:11 },
+  { key:'lunch',   label:'🍱 ランチ', start:11, end:14 },
+  { key:'afternoon',label:'🌤️ 午後',  start:14, end:17 },
+  { key:'dinner',  label:'🍽️ ディナー',start:17, end:21 },
+  { key:'night',   label:'🌙 夜',    start:21, end:27 }, // 27=翌3時
+];
+
+function calcTimeSlotHourly(records){
+  const slotData = {};
+  TIME_SLOTS.forEach(s => { slotData[s.key] = { mins:0, sales:0, days:0 }; });
+
+  records.filter(r => totalOf(r)>0 && r.sessions && r.sessions.length).forEach(r => {
+    const totalMins = r.sessions.filter(s=>s.depart&&s.return).reduce((sum,s)=>{
+      const[dh,dm]=s.depart.split(':').map(Number);
+      const[rh,rm]=s.return.split(':').map(Number);
+      return sum+Math.max(0,(rh*60+rm)-(dh*60+dm));
+    },0);
+    if(!totalMins) return;
+    const sales = totalOf(r);
+
+    r.sessions.filter(s=>s.depart&&s.return).forEach(sess=>{
+      const[dh,dm]=sess.depart.split(':').map(Number);
+      const[rh,rm]=sess.return.split(':').map(Number);
+      const sessStart = dh*60+dm;
+      const sessEnd   = rh*60+rm;
+      if(sessEnd <= sessStart) return;
+
+      TIME_SLOTS.forEach(slot=>{
+        const slotStart = slot.start*60;
+        const slotEnd   = slot.end*60;
+        const overlap   = Math.max(0, Math.min(sessEnd,slotEnd)-Math.max(sessStart,slotStart));
+        if(overlap > 0){
+          // このセッション内でスロットが占める割合で売上を配分
+          const ratio = overlap / (sessEnd - sessStart);
+          const sessMins = sessEnd - sessStart;
+          const sessRatio = sessMins / totalMins;
+          slotData[slot.key].mins  += overlap;
+          slotData[slot.key].sales += sales * (overlap / (sessEnd - sessStart)) * sessRatio / sessRatio;
+        }
+      });
+    });
+  });
+
+  return TIME_SLOTS.map(slot => {
+    const d = slotData[slot.key];
+    const hrs = d.mins / 60;
+    const hourly = hrs > 0 ? Math.round(d.sales / hrs) : null;
+    return { ...slot, hrs: Math.round(hrs*10)/10, sales: Math.round(d.sales), hourly };
+  }).filter(s => s.hrs > 0);
+}
+
 function diffHtml(cur,prev,label){
   if(!prev) return `<div class="sdiff neu">--% ${label}</div>`;
   const p=Math.round((cur-prev)/prev*100);
@@ -1135,6 +1188,28 @@ function renderSummary(){
     <div class="weather-grid">${wCards||'<div style="font-size:13px;color:var(--text2)">データがありません</div>'}</div>
     <div class="section-title">曜日別 平均売上（全期間）</div>
     <div class="dow-grid">${dowCards}</div>
+    <div class="section-title">時間帯別 時給（セッション比例配分）</div>
+    ${(()=>{
+      const slotResult = calcTimeSlotHourly(records.filter(r=>r.date>=BASE_DATE));
+      if(!slotResult.length) return '<div style="font-size:13px;color:var(--text2);margin-bottom:12px">出発・帰宅ボタンを使った記録が3件以上あると表示されます</div>';
+      const maxH = Math.max(...slotResult.map(s=>s.hourly||0),1);
+      return `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
+        ${slotResult.map(s=>{
+          const barW = Math.round((s.hourly||0)/maxH*100);
+          const color = s.hourly>=2000?'var(--uber)':s.hourly>=1500?'#BA7517':'var(--text2)';
+          return `<div style="background:var(--bg2);border-radius:var(--radius);padding:10px 12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+              <span style="font-size:13px;font-weight:600">${s.label}</span>
+              <span style="font-size:14px;font-weight:700;color:${color}">${s.hourly?'¥'+s.hourly.toLocaleString()+'/h':'--'}</span>
+            </div>
+            <div style="height:5px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:4px">
+              <div style="height:100%;width:${barW}%;background:${color};border-radius:3px"></div>
+            </div>
+            <div style="font-size:11px;color:var(--text2)">${s.hrs}h稼働 / ¥${s.sales.toLocaleString()}</div>
+          </div>`;
+        }).join('')}
+      </div>`;
+    })()}
     <div class="section-title">高収入ベスト5</div>
     <div class="rank-list">${rankItems||'<div class="empty">データがありません</div>'}</div>
     <div class="section-title">日別売上</div>
@@ -1466,6 +1541,11 @@ function renderBadges(){
   // ランダム要素（タップするたびに変わる）
   const rand = Math.random();
 
+  // 先月同日ペース比較（月全体の比較ではなく同日時点で比べる）
+  const curPace2  = f.filter(r => +r.date.slice(8) <= todayDay).reduce((s,r) => s+totalOf(r), 0);
+  const prevPace2 = records.filter(r => r.date.startsWith(prevM) && +r.date.slice(8) <= todayDay).reduce((s,r) => s+totalOf(r), 0);
+  const paceDiff2 = prevPace2 > 0 ? Math.round((curPace2 - prevPace2) / prevPace2 * 100) : null;
+
   // 判定の優先順位を整理して全表情が出やすいよう分散
   const patterns = [];
 
@@ -1476,11 +1556,11 @@ function renderBadges(){
       `やったー！目標クリア！\n今月も絶好調だね！🔥`,
       `¥${curS.toLocaleString()}稼いだじゃん！\n本当にすごいよ！✨`,
     ]});
-  if(prevDiff !== null && prevDiff >= 15)
-    patterns.push({mood:'excited', label:'🔥 爆上がり中！', color:'#FF6B00', lines:[
-      `前月より${prevDiff}%アップ！\n絶好調だね、この調子！🚀`,
-      `先月から${prevDiff}%も伸びてる！\nすごすぎ！！🔥`,
-      `爆上がり中！\n¥${curS.toLocaleString()}、かっこいい！✨`,
+  if(paceDiff2 !== null && paceDiff2 >= 15)
+    patterns.push({mood:'excited', label:'🔥 先月より爆上がり！', color:'#FF6B00', lines:[
+      `先月同日より${paceDiff2}%アップ！\n絶好調だね、この調子！🚀`,
+      `同じ時期と比べて${paceDiff2}%も伸びてる！\nすごすぎ！！🔥`,
+      `ペースが爆上がり中！\n¥${curPace2.toLocaleString()}、かっこいい！✨`,
     ]});
   if(streak >= 7)
     patterns.push({mood:'excited', label:`🔥 ${streak}日連続稼働！`, color:'#FF6B00', lines:[
@@ -1505,10 +1585,10 @@ function renderBadges(){
       `10万円突破！\n¥${curS.toLocaleString()}、すごいよ！🎊`,
       `${active}日稼働で¥${curS.toLocaleString()}！\nかっこいい！✨`,
     ]});
-  if(prevDiff !== null && prevDiff >= 5 && prevDiff < 15)
-    patterns.push({mood:'happy', label:'📈 前月より好調！', color:'#06C167', lines:[
-      `先月より${prevDiff}%アップ中！\n調子いいじゃん！😊`,
-      `じわじわ上がってるよ！\n¥${curS.toLocaleString()}、いい感じ！`,
+  if(paceDiff2 !== null && paceDiff2 >= 3 && paceDiff2 < 15)
+    patterns.push({mood:'happy', label:'📈 先月より好調！', color:'#06C167', lines:[
+      `先月同日より${paceDiff2}%アップ中！\n調子いいじゃん！😊`,
+      `同じ時期と比べてじわじわ上がってるよ！\n¥${curPace2.toLocaleString()}、いい感じ！`,
     ]});
   if(dailyAvg >= 10000 && active >= 5)
     patterns.push({mood:'happy', label:'😊 日平均いいね！', color:'#4A90D9', lines:[
@@ -1528,13 +1608,18 @@ function renderBadges(){
       `月初から¥${curS.toLocaleString()}！\n好スタートだよ！✨`,
       `まだ月初なのに\nもうこんなに稼いでるじゃん！`,
     ]});
+  if(paceDiff2 !== null && paceDiff2 >= -3 && paceDiff2 < 3)
+    patterns.push({mood:'sleeping', label:'😌 先月並みのペース', color:'#4A90D9', lines:[
+      `先月とほぼ同じペース！\n安定してていいね！😊`,
+      `同じ時期と比べて同水準！\n着実に積み上げてるよ！`,
+    ]});
 
-  // 😟 もやもや（sad）: 伸び悩み・前月比マイナス
-  if(prevDiff !== null && prevDiff <= -15)
-    patterns.push({mood:'sad', label:'😟 ちょっと心配…', color:'#E91E63', lines:[
-      `先月より${Math.abs(prevDiff)}%ダウン…\nでも大丈夫、まだ巻き返せる！💨`,
-      `うーん、ちょっと落ちてるね\nでも${active}日も頑張ったじゃん！`,
-      `ここから追い上げよ！\n一緒に頑張るからね！🌟`,
+  // 😟 もやもや（sad）: ペースが落ちているとき
+  if(paceDiff2 !== null && paceDiff2 <= -15)
+    patterns.push({mood:'sad', label:'😟 先月より少し遅れ気味…', color:'#E91E63', lines:[
+      `先月同日より${Math.abs(paceDiff2)}%遅れてるけど\nまだ挽回できるよ！💨`,
+      `同じ時期と比べてちょっと少ないね\nここから上げていこ！🌟`,
+      `遅れてるの気にしすぎないで！\n一緒に追い上げよ！💪`,
     ]});
   if(goalPct !== null && goalPct < 30 && monthProgress > 0.5)
     patterns.push({mood:'sad', label:'😟 ちょっと遅れてる…', color:'#E91E63', lines:[
@@ -1542,7 +1627,7 @@ function renderBadges(){
       `もう少しペース上げると\n目標届くかも！一緒に頑張ろ！`,
     ]});
 
-  // 😤 焦り（worried）: 月末なのに低い・今日ゼロ
+  // 😤 焦り（worried）: 月末・今日ゼロ
   if(monthProgress > 0.8 && goalPct !== null && goalPct < 70)
     patterns.push({mood:'worried', label:'😤 ラストスパート！', color:'#FF6B00', lines:[
       `月末近い！\n今からでも全然間に合うよ！🔥`,
