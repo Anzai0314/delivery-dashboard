@@ -1456,62 +1456,117 @@ function renderBadges(){
   // mood: 'excited'(大喜び) 'happy'(笑顔) 'normal'(普通) 'worried'(心配) 'sad'(落ち込み) 'sleeping'(暇)
   let mood, statusLabel, statusColor, lines;
 
-  if(curS === 0){
-    mood='normal'; // 通常
-    statusLabel='今日も頑張ろ！'; statusColor='#9a9a96';
-    lines=[
-      'まだデータがないよ〜\nきょうも出発してみよ！🛵',
-      'ひまだ〜！\n早く数字を見せてね！📊',
-      'zzz…\nあ、来た！今日も頑張ろ！☀️',
-    ];
-  } else if(goalPct !== null && goalPct >= 100){
-    mood='excited'; // 照れ→今回は目標達成で使用
-    statusLabel='🎉 目標達成！！'; statusColor='#06C167';
-    lines=[
+  // ── 表情・台詞判定（バランスよく全パターン出るよう設計）──
+  // 今日の実績
+  const todayRec2 = records.find(r => r.date === todayStr());
+  const todayS = todayRec2 ? totalOf(todayRec2) : 0;
+  // 月初からの日数経過率
+  const monthProgress = passed / new Date(y, m, 0).getDate();
+  // ランダム要素（タップするたびに変わる）
+  const rand = Math.random();
+
+  // 判定の優先順位を整理して全表情が出やすいよう分散
+  const patterns = [];
+
+  // 🎉 照れ（excited）: 良いこと全般
+  if(goalPct !== null && goalPct >= 100)
+    patterns.push({mood:'excited', label:'🎉 目標達成！！', color:'#06C167', lines:[
       `目標${goalPct}%達成！！\n¥${curS.toLocaleString()}、最高すぎる！🎊`,
-      `やったー！！\n今月も絶好調だね！🔥`,
+      `やったー！目標クリア！\n今月も絶好調だね！🔥`,
       `¥${curS.toLocaleString()}稼いだじゃん！\n本当にすごいよ！✨`,
-    ];
-  } else if(prevDiff !== null && prevDiff >= 20){
-    mood='excited'; // 照れ
-    statusLabel='🔥 爆上がり中！'; statusColor='#FF6B00';
-    lines=[
+    ]});
+  if(prevDiff !== null && prevDiff >= 15)
+    patterns.push({mood:'excited', label:'🔥 爆上がり中！', color:'#FF6B00', lines:[
       `前月より${prevDiff}%アップ！\n絶好調だね、この調子！🚀`,
       `先月から${prevDiff}%も伸びてる！\nすごすぎ！！🔥`,
-    ];
-  } else if(curS >= 100000 || (goalPct !== null && goalPct >= 70)){
-    mood='happy'; // 笑顔
-    statusLabel='😊 いい感じ！'; statusColor='#06C167';
-    lines=[
-      `¥${curS.toLocaleString()}！\nいいペースで来てるよ！💪`,
-      `${active}日稼働で¥${curS.toLocaleString()}！\nこの調子でいこ！✨`,
-      goalPct !== null ? `目標まで残り${100-goalPct}%！\nあと少しだよ！頑張れ！` : `日平均¥${dailyAvg.toLocaleString()}！\nいいペースだよ！😊`,
-    ];
-  } else if(prevDiff !== null && prevDiff <= -15){
-    mood='sad'; // もやもや
-    statusLabel='😟 ちょっと心配…'; statusColor='#E91E63';
-    lines=[
+      `爆上がり中！\n¥${curS.toLocaleString()}、かっこいい！✨`,
+    ]});
+  if(streak >= 7)
+    patterns.push({mood:'excited', label:`🔥 ${streak}日連続稼働！`, color:'#FF6B00', lines:[
+      `${streak}日連続稼働！！\nその継続力、本物だよ！🔥`,
+      `${streak}日も続けてるなんて\nすごすぎる！！✨`,
+    ]});
+  if(todayS >= 20000)
+    patterns.push({mood:'excited', label:'⭐ 今日は大当たり！', color:'#BA7517', lines:[
+      `今日¥${todayS.toLocaleString()}！\n大当たりの日だね！🌟`,
+      `今日は${todayS >= 30000 ? '3万超え' : '2万超え'}！！\nやったね！🎉`,
+    ]});
+
+  // 😊 笑顔（happy）: 順調・いいペース
+  if(goalPct !== null && goalPct >= 60 && goalPct < 100)
+    patterns.push({mood:'happy', label:'😊 いい感じ！', color:'#06C167', lines:[
+      `目標${goalPct}%！\nあと少しで達成だよ！💪`,
+      `¥${(goalAmt - curS).toLocaleString()}で目標達成！\nもう一息だよ！🌟`,
+      `いいペースで来てるよ！\nこの調子で頑張ろ！😊`,
+    ]});
+  if(curS >= 100000)
+    patterns.push({mood:'happy', label:'💴 10万突破！', color:'#06C167', lines:[
+      `10万円突破！\n¥${curS.toLocaleString()}、すごいよ！🎊`,
+      `${active}日稼働で¥${curS.toLocaleString()}！\nかっこいい！✨`,
+    ]});
+  if(prevDiff !== null && prevDiff >= 5 && prevDiff < 15)
+    patterns.push({mood:'happy', label:'📈 前月より好調！', color:'#06C167', lines:[
+      `先月より${prevDiff}%アップ中！\n調子いいじゃん！😊`,
+      `じわじわ上がってるよ！\n¥${curS.toLocaleString()}、いい感じ！`,
+    ]});
+  if(dailyAvg >= 10000 && active >= 5)
+    patterns.push({mood:'happy', label:'😊 日平均いいね！', color:'#4A90D9', lines:[
+      `日平均¥${dailyAvg.toLocaleString()}！\nコンスタントに稼いでるね！`,
+      `${active}日間コツコツ積み上げ中！\nすごいよ！😊`,
+    ]});
+
+  // 😌 安心（sleeping）: 安定・お疲れ
+  if(active >= 10)
+    patterns.push({mood:'sleeping', label:'😌 お疲れ様！', color:'#4A90D9', lines:[
+      `${active}日も稼働したんだね！\nゆっくり休んでね！😊`,
+      `¥${curS.toLocaleString()}！\n${active}日間お疲れ様！✨`,
+      `コツコツ続けてるの\nちゃんと見てるよ！🌟`,
+    ]});
+  if(monthProgress < 0.3 && curS > 0)
+    patterns.push({mood:'sleeping', label:'😌 好スタート！', color:'#4A90D9', lines:[
+      `月初から¥${curS.toLocaleString()}！\n好スタートだよ！✨`,
+      `まだ月初なのに\nもうこんなに稼いでるじゃん！`,
+    ]});
+
+  // 😟 もやもや（sad）: 伸び悩み・前月比マイナス
+  if(prevDiff !== null && prevDiff <= -15)
+    patterns.push({mood:'sad', label:'😟 ちょっと心配…', color:'#E91E63', lines:[
       `先月より${Math.abs(prevDiff)}%ダウン…\nでも大丈夫、まだ巻き返せる！💨`,
       `うーん、ちょっと落ちてるね\nでも${active}日も頑張ったじゃん！`,
       `ここから追い上げよ！\n一緒に頑張るからね！🌟`,
-    ];
-  } else if(curS > 0 && curS < 30000){
-    mood='worried'; // 焦り
-    statusLabel='😢 もう少し…'; statusColor='#9a9a96';
-    lines=[
-      `まだ¥${curS.toLocaleString()}だけど\nここから上げていこ！💪`,
-      `今日も出発すれば\nきっと変わるよ！🛵`,
-      `焦らなくていいよ！\n一歩一歩積み上げよ！✨`,
-    ];
-  } else {
-    mood='sleeping'; // 安心
-    statusLabel='😌 順調だよ'; statusColor='#4A90D9';
-    lines=[
-      `¥${curS.toLocaleString()}！\n${active}日間お疲れ様！😊`,
-      `日平均¥${dailyAvg.toLocaleString()}ペース！\nコツコツ積み上げ中！`,
-      streak >= 3 ? `${streak}日連続稼働！\n継続は力なりだね！🔥` : `今月も着実に来てるよ！\n一緒に頑張ろ！✨`,
-    ];
-  }
+    ]});
+  if(goalPct !== null && goalPct < 30 && monthProgress > 0.5)
+    patterns.push({mood:'sad', label:'😟 ちょっと遅れてる…', color:'#E91E63', lines:[
+      `目標まで少し遅れてるけど\nまだ間に合うよ！頑張ろ！💪`,
+      `もう少しペース上げると\n目標届くかも！一緒に頑張ろ！`,
+    ]});
+
+  // 😤 焦り（worried）: 月末なのに低い・今日ゼロ
+  if(monthProgress > 0.8 && goalPct !== null && goalPct < 70)
+    patterns.push({mood:'worried', label:'😤 ラストスパート！', color:'#FF6B00', lines:[
+      `月末近い！\n今からでも全然間に合うよ！🔥`,
+      `ラストスパートだ！\n一緒に追い上げよう！💨`,
+      `残り少ないけど\nできることやってみよ！💪`,
+    ]});
+  if(todayS === 0 && active > 0)
+    patterns.push({mood:'worried', label:'🛵 今日はまだ…', color:'#FF6B00', lines:[
+      `今日はまだ出発してないね！\n天気もいいし行ってみよ！🛵`,
+      `今日のデータがまだないよ！\n一稼ぎしてきて！💨`,
+    ]});
+
+  // 😴 通常（normal）: デフォルト・データなし
+  patterns.push({mood:'normal', label:'📊 今月の状況', color:'#9a9a96', lines:[
+    curS === 0 ? 'まだデータがないよ〜\n今日も出発してみよ！🛵' : `¥${curS.toLocaleString()}！\n今月も一緒に頑張ろ！💪`,
+    curS === 0 ? 'ひまだ〜！\n早く数字を見せてね！📊' : `${active}日稼働中！\nコツコツ積み上げてるね！✨`,
+    `今日も安全運転でね！\n応援してるよ！🛵`,
+  ]});
+
+  // ランダムに選ぶ（パターンが多いほど出やすい）
+  const chosen = patterns[Math.floor(rand * patterns.length)];
+  mood = chosen.mood;
+  statusLabel = chosen.label;
+  statusColor = chosen.color;
+  lines = chosen.lines;
 
   const text = lines[Math.floor(Math.random()*lines.length)];
 
