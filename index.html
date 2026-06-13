@@ -207,15 +207,6 @@ body{display:flex;flex-direction:column}
 .cms-val{font-size:14px;font-weight:700}
 
 .empty{text-align:center;padding:3rem 1rem;color:var(--text2);font-size:13px}
-/* バッジ */
-.badge-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.badge-card{border-radius:var(--radius-lg);padding:14px;text-align:center;border:0.5px solid var(--border)}
-.badge-card.unlocked{background:linear-gradient(135deg,rgba(6,193,103,0.12),rgba(186,117,23,0.08));border-color:var(--uber)}
-.badge-card.locked{background:var(--bg2);opacity:.5}
-.badge-icon{font-size:28px;margin-bottom:6px}
-.badge-name{font-size:12px;font-weight:700;margin-bottom:3px}
-.badge-desc{font-size:10px;color:var(--text2)}
-.badge-new{display:inline-block;background:var(--uber);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-bottom:4px}
 /* 週次 */
 .week-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .week-day-list{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
@@ -231,6 +222,15 @@ body{display:flex;flex-direction:column}
 .goal-forecast{background:rgba(186,117,23,0.1);border:0.5px solid #BA7517;border-radius:var(--radius);padding:10px 12px;margin-top:8px;font-size:12px;color:#BA7517;font-weight:600}
 /* 予測カード */
 .pred-factors{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+/* キャラクターページ */
+.miru-stage{display:flex;flex-direction:column;align-items:center;padding:20px 0 10px}
+.miru-svg-wrap{position:relative;width:160px;height:160px;margin-bottom:16px}
+.miru-bubble{background:var(--bg2);border:0.5px solid var(--border);border-radius:16px 16px 16px 4px;padding:14px 16px;margin:0 8px 16px;font-size:14px;line-height:1.7;position:relative;min-height:60px;text-align:center}
+.miru-bubble::before{content:'';position:absolute;left:20px;bottom:-10px;border:5px solid transparent;border-top-color:var(--border)}
+.miru-bubble::after{content:'';position:absolute;left:21px;bottom:-8px;border:4px solid transparent;border-top-color:var(--bg2)}
+.miru-status{font-size:12px;font-weight:700;padding:4px 14px;border-radius:20px;margin-bottom:10px;display:inline-block}
+.miru-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:8px}
+.miru-tap-hint{font-size:11px;color:var(--text3);margin-top:8px}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1}
 </style>
@@ -383,9 +383,10 @@ body{display:flex;flex-direction:column}
     <div id="week-content"></div>
   </div>
 
-  <!-- ⑥ バッジページ -->
+  <!-- ⑥ キャラクターページ -->
   <div id="page-badge" class="page">
-    <div style="font-size:15px;font-weight:600;margin-bottom:14px">実績バッジ</div>
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">ミルからのひとこと</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:16px">今月の売上に応じてミルの表情が変わるよ</div>
     <div id="badge-content"></div>
   </div>
 
@@ -396,7 +397,7 @@ body{display:flex;flex-direction:column}
   <button class="nav-item" id="nav-summary"><i class="ti ti-chart-bar"></i>分析</button>
   <button class="nav-item" id="nav-week"><i class="ti ti-calendar-week"></i>週次</button>
   <button class="nav-item" id="nav-cal"><i class="ti ti-calendar"></i>暦</button>
-  <button class="nav-item" id="nav-badge"><i class="ti ti-trophy"></i>バッジ</button>
+  <button class="nav-item" id="nav-badge"><i class="ti ti-mood-smile"></i>ミル</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1427,50 +1428,148 @@ function renderWeek(){
 }
 
 // ── バッジ定義・描画 ──────────────────────────
+// ── ミルキャラクターページ ────────────────────
 function renderBadges(){
-  const allS=records.reduce((s,r)=>s+totalOf(r),0);
-  const allDays=records.filter(r=>totalOf(r)>0).length;
-  const allH=records.reduce((s,r)=>s+hoursOf(r),0);
-  const avgHourly=allH>0?Math.round(allS/allH):0;
-  const maxDay=records.reduce((mx,r)=>Math.max(mx,totalOf(r)),0);
-  const monthSales={};
-  records.forEach(r=>{const m=r.date.slice(0,7);monthSales[m]=(monthSales[m]||0)+totalOf(r);});
-  const maxMonth=Math.max(...Object.values(monthSales),0);
+  // 今月データ
+  const month = getMonthStr();
+  const f = records.filter(r => r.date.startsWith(month));
+  const curS = f.reduce((s,r) => s+totalOf(r), 0);
+  const goalAmt = goals[month]||0;
+  const goalPct = goalAmt > 0 ? Math.round(curS/goalAmt*100) : null;
+  const active = f.filter(r => totalOf(r)>0).length;
+  const [y,m] = month.split('-').map(Number);
+  const prevM = m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`;
+  const prevS = records.filter(r=>r.date.startsWith(prevM)).reduce((s,r)=>s+totalOf(r),0);
+  const prevDiff = prevS > 0 ? Math.round((curS-prevS)/prevS*100) : null;
+  const today2 = new Date();
+  const passed = today2.toISOString().slice(0,7)===month ? today2.getDate() : new Date(y,m,0).getDate();
+  const dailyAvg = passed > 0 ? Math.round(curS/passed) : 0;
+  // 連続稼働
   let streak=0;
-  for(let i=0;;i++){const d=new Date();d.setDate(d.getDate()-i);const ds=todayStr().slice(0,8).replace(/\d{2}$/,String(d.getDate()).padStart(2,'0'));const dd=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;if(records.find(r=>r.date===dd&&totalOf(r)>0))streak++;else break;}
+  for(let i=0;;i++){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    if(records.find(r=>r.date===ds&&totalOf(r)>0)) streak++; else break;
+  }
 
-  // セッション記録数（帰宅あり）
-  const completedSessions=records.reduce((s,r)=>(r.sessions||[]).filter(ss=>ss.depart&&ss.return).length+s,0);
+  // ── 表情・台詞パターン判定 ──
+  // mood: 'excited'(大喜び) 'happy'(笑顔) 'normal'(普通) 'worried'(心配) 'sad'(落ち込み) 'sleeping'(暇)
+  let mood, statusLabel, statusColor, lines;
 
-  const badges=[
-    {icon:'🚀',name:'初稼働',desc:'初めてデータを記録',unlocked:allDays>=1},
-    {icon:'📅',name:'7日連続',desc:'7日間連続稼働',unlocked:streak>=7},
-    {icon:'📅',name:'30日連続',desc:'30日間連続稼働',unlocked:streak>=30},
-    {icon:'💴',name:'月5万達成',desc:'1ヶ月で5万円以上',unlocked:maxMonth>=50000},
-    {icon:'💴',name:'月10万達成',desc:'1ヶ月で10万円以上',unlocked:maxMonth>=100000},
-    {icon:'💴',name:'月15万達成',desc:'1ヶ月で15万円以上',unlocked:maxMonth>=150000},
-    {icon:'⭐',name:'日2万超え',desc:'1日で2万円以上',unlocked:maxDay>=20000},
-    {icon:'⭐',name:'日3万超え',desc:'1日で3万円以上',unlocked:maxDay>=30000},
-    {icon:'⏱️',name:'時給2000円',desc:'平均時給2000円以上',unlocked:avgHourly>=2000},
-    {icon:'⏱️',name:'時給3000円',desc:'平均時給3000円以上',unlocked:avgHourly>=3000},
-    {icon:'🏆',name:'累計100日',desc:'累計稼働100日以上',unlocked:allDays>=100},
-    {icon:'💎',name:'累計100万円',desc:'累計売上100万円以上',unlocked:allS>=1000000},
-    {icon:'🔧',name:'セッション名人',desc:'出発・帰宅を10回記録',unlocked:completedSessions>=10},
-    {icon:'🌟',name:'オールラウンダー',desc:'3社すべてで稼働',unlocked:records.some(r=>r.uber.sales>0)&&records.some(r=>r.demae.sales>0)&&records.some(r=>r.rocket.sales>0)},
-  ];
+  if(curS === 0){
+    mood='normal'; // 通常
+    statusLabel='今日も頑張ろ！'; statusColor='#9a9a96';
+    lines=[
+      'まだデータがないよ〜\nきょうも出発してみよ！🛵',
+      'ひまだ〜！\n早く数字を見せてね！📊',
+      'zzz…\nあ、来た！今日も頑張ろ！☀️',
+    ];
+  } else if(goalPct !== null && goalPct >= 100){
+    mood='excited'; // 照れ→今回は目標達成で使用
+    statusLabel='🎉 目標達成！！'; statusColor='#06C167';
+    lines=[
+      `目標${goalPct}%達成！！\n¥${curS.toLocaleString()}、最高すぎる！🎊`,
+      `やったー！！\n今月も絶好調だね！🔥`,
+      `¥${curS.toLocaleString()}稼いだじゃん！\n本当にすごいよ！✨`,
+    ];
+  } else if(prevDiff !== null && prevDiff >= 20){
+    mood='excited'; // 照れ
+    statusLabel='🔥 爆上がり中！'; statusColor='#FF6B00';
+    lines=[
+      `前月より${prevDiff}%アップ！\n絶好調だね、この調子！🚀`,
+      `先月から${prevDiff}%も伸びてる！\nすごすぎ！！🔥`,
+    ];
+  } else if(curS >= 100000 || (goalPct !== null && goalPct >= 70)){
+    mood='happy'; // 笑顔
+    statusLabel='😊 いい感じ！'; statusColor='#06C167';
+    lines=[
+      `¥${curS.toLocaleString()}！\nいいペースで来てるよ！💪`,
+      `${active}日稼働で¥${curS.toLocaleString()}！\nこの調子でいこ！✨`,
+      goalPct !== null ? `目標まで残り${100-goalPct}%！\nあと少しだよ！頑張れ！` : `日平均¥${dailyAvg.toLocaleString()}！\nいいペースだよ！😊`,
+    ];
+  } else if(prevDiff !== null && prevDiff <= -15){
+    mood='sad'; // もやもや
+    statusLabel='😟 ちょっと心配…'; statusColor='#E91E63';
+    lines=[
+      `先月より${Math.abs(prevDiff)}%ダウン…\nでも大丈夫、まだ巻き返せる！💨`,
+      `うーん、ちょっと落ちてるね\nでも${active}日も頑張ったじゃん！`,
+      `ここから追い上げよ！\n一緒に頑張るからね！🌟`,
+    ];
+  } else if(curS > 0 && curS < 30000){
+    mood='worried'; // 焦り
+    statusLabel='😢 もう少し…'; statusColor='#9a9a96';
+    lines=[
+      `まだ¥${curS.toLocaleString()}だけど\nここから上げていこ！💪`,
+      `今日も出発すれば\nきっと変わるよ！🛵`,
+      `焦らなくていいよ！\n一歩一歩積み上げよ！✨`,
+    ];
+  } else {
+    mood='sleeping'; // 安心
+    statusLabel='😌 順調だよ'; statusColor='#4A90D9';
+    lines=[
+      `¥${curS.toLocaleString()}！\n${active}日間お疲れ様！😊`,
+      `日平均¥${dailyAvg.toLocaleString()}ペース！\nコツコツ積み上げ中！`,
+      streak >= 3 ? `${streak}日連続稼働！\n継続は力なりだね！🔥` : `今月も着実に来てるよ！\n一緒に頑張ろ！✨`,
+    ];
+  }
 
-  const unlockedCount=badges.filter(b=>b.unlocked).length;
-  document.getElementById('badge-content').innerHTML=`
-    <div style="font-size:13px;color:var(--text2);margin-bottom:14px">${unlockedCount} / ${badges.length} 解除済み</div>
-    <div class="badge-grid">
-      ${badges.map(b=>`<div class="badge-card ${b.unlocked?'unlocked':'locked'}">
-        <div class="badge-icon">${b.icon}</div>
-        <div class="badge-name">${b.name}</div>
-        <div class="badge-desc">${b.desc}</div>
-        ${b.unlocked?'<div style="margin-top:5px;font-size:10px;color:var(--uber)">✓ 解除済み</div>':''}
-      </div>`).join('')}
+  const text = lines[Math.floor(Math.random()*lines.length)];
+
+  // ── スプライトシート設定 ──
+  // 画像URL（raw）
+  const SPRITE_URL = 'https://raw.githubusercontent.com/Anzai0314/delivery-dashboard/main/fox_6ptn.png';
+  // 1コマ 500×500px、3列2行
+  const SPRITE_MAP = {
+    normal:   {col:0, row:0},
+    happy:    {col:1, row:0},
+    worried:  {col:2, row:0},
+    sad:      {col:0, row:1},
+    excited:  {col:1, row:1},
+    sleeping: {col:2, row:1},
+  };
+  const CELL = 500;
+  const DISP = 160; // 表示サイズ(px)
+  const scale = DISP / CELL;
+  const pos = SPRITE_MAP[mood] || SPRITE_MAP.normal;
+  const bgX = -(pos.col * CELL * scale);
+  const bgY = -(pos.row * CELL * scale);
+  const bgW = 3 * CELL * scale; // 全体幅
+  const bgH = 2 * CELL * scale; // 全体高さ
+
+  const statCards = [
+    {label:'今月売上', val:`¥${curS.toLocaleString()}`},
+    {label:'稼働日数', val:`${active}日`},
+    {label:'前月比', val: prevDiff!==null ? (prevDiff>0?`▲${prevDiff}%`:`▼${Math.abs(prevDiff)}%`) : '--', color: prevDiff===null?'':prevDiff>0?'var(--up)':'var(--down)'},
+    {label:'連続稼働', val:`${streak}日`},
+    goalAmt ? {label:'目標達成率', val:`${goalPct??0}%`, color: goalPct>=100?'var(--up)':'var(--text)'} : null,
+    {label:'日平均', val:`¥${dailyAvg.toLocaleString()}`},
+  ].filter(Boolean);
+
+  document.getElementById('badge-content').innerHTML = `
+    <div class="miru-stage">
+      <span class="miru-status" style="background:${statusColor}22;color:${statusColor};border:0.5px solid ${statusColor}66">${statusLabel}</span>
+      <div class="miru-svg-wrap">
+        <div id="miru-sprite" style="
+          width:${DISP}px;
+          height:${DISP}px;
+          background-image:url('${SPRITE_URL}');
+          background-size:${bgW}px ${bgH}px;
+          background-position:${bgX}px ${bgY}px;
+          background-repeat:no-repeat;
+          cursor:pointer;
+          image-rendering:auto;
+        "></div>
+      </div>
+      <div class="miru-bubble">${text.replace(/\n/g,'<br>')}</div>
+      <div class="miru-tap-hint">タップで台詞を変えるよ</div>
+      <div class="miru-stats-grid">
+        ${statCards.map(c=>`<div class="stat-card"><div class="slabel">${c.label}</div><div class="sval" style="${c.color?'color:'+c.color:''}">${c.val}</div></div>`).join('')}
+      </div>
     </div>
   `;
+
+  document.getElementById('miru-sprite').addEventListener('click', ()=>renderBadges());
+  document.querySelector('.miru-bubble').addEventListener('click', ()=>renderBadges());
 }
 
 function showToast(msg){
