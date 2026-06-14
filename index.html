@@ -1519,6 +1519,7 @@ function renderBadges(){
   const prevDiff = prevS > 0 ? Math.round((curS-prevS)/prevS*100) : null;
   const today2 = new Date();
   const passed = today2.toISOString().slice(0,7)===month ? today2.getDate() : new Date(y,m,0).getDate();
+  const todayDay = passed;
   const dailyAvg = passed > 0 ? Math.round(curS/passed) : 0;
   // 連続稼働
   let streak=0;
