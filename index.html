@@ -1445,26 +1445,26 @@ function renderWeek(){
   const pwf=prevDates.map(d=>records.find(r=>r.date===d)||{date:d,uber:{sales:0,count:0},demae:{sales:0,count:0},rocket:{sales:0,count:0}});
   const prevWeekS=pwf.reduce((s,r)=>s+totalOf(r),0);
 
-  // 先月同週比較
-  const prevMonthDates=dates.map(d=>{
-    const[y,m,day]=d.split('-').map(Number);
-    const pm=m===1?12:m-1, py=m===1?y-1:y;
-    return `${py}-${String(pm).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  // 先週同曜日比較（各日の7日前）
+  const prevWeekSameDayDates = dates.map(d => {
+    const dt = new Date(d+'T00:00:00');
+    dt.setDate(dt.getDate()-7);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
   });
-  const pmwf=prevMonthDates.map(d=>records.find(r=>r.date===d)||{date:d,uber:{sales:0,count:0},demae:{sales:0,count:0},rocket:{sales:0,count:0}});
-  const prevMonthWeekS=pmwf.reduce((s,r)=>s+totalOf(r),0);
+  const pmwf = prevWeekSameDayDates.map(d => records.find(r=>r.date===d)||{date:d,uber:{sales:0,count:0},demae:{sales:0,count:0},rocket:{sales:0,count:0}});
+  const prevMonthWeekS = pmwf.reduce((s,r)=>s+totalOf(r),0);
 
   const maxDay=Math.max(...wf.map(r=>totalOf(r)),1);
   const dayRows=wf.map((r,i)=>{
     const t=totalOf(r), dow=DAYS[new Date(r.date+'T00:00:00').getDay()];
     const isToday=r.date===today;
     const barW=Math.round(t/maxDay*100);
-    // 先月同日
-    const pmRec=records.find(rec=>rec.date===prevMonthDates[i]);
+    // 先週同曜日
+    const pmRec=records.find(rec=>rec.date===prevWeekSameDayDates[i]);
     const pmT=pmRec?totalOf(pmRec):0;
     const diffStr=pmT>0?(t>pmT?`<span class="up">▲${Math.round((t-pmT)/pmT*100)}%</span>`:`<span class="down">▼${Math.round((pmT-t)/pmT*100)}%</span>`):'';
     return `<div class="week-day-row${isToday?' today':''}">
-      <span class="wdr-dow" style="color:${i===6?'#E91E63':i===5?'#4A90D9':'var(--text)'}">${dow}</span>
+      <span class="wdr-dow" style="color:${dow==='日'?'#E91E63':dow==='土'?'#4A90D9':'var(--text)'}">${dow}</span>
       <span class="wdr-date">${r.date.slice(5).replace('-','/')}</span>
       <div class="wdr-bar-wrap"><div class="wdr-bar" style="width:${barW}%"></div></div>
       <span class="wdr-sales" style="color:${t>0?'var(--uber)':'var(--text3)'}">${t>0?'¥'+t.toLocaleString():'--'}</span>
@@ -1473,14 +1473,14 @@ function renderWeek(){
   }).join('');
 
   const diffPrevWeek=prevWeekS>0?Math.round((weekS-prevWeekS)/prevWeekS*100):null;
-  const diffPrevMonth=prevMonthWeekS>0?Math.round((weekS-prevMonthWeekS)/prevMonthWeekS*100):null;
+  const diffPrevSameDay=prevMonthWeekS>0?Math.round((weekS-prevMonthWeekS)/prevMonthWeekS*100):null;
 
   document.getElementById('week-content').innerHTML=`
     <div class="week-stat-grid">
       <div class="stat-card"><div class="slabel">今週の売上</div><div class="sval">¥${weekS.toLocaleString()}</div>
         <div class="sdiff">
           ${diffPrevWeek!==null?(diffPrevWeek>0?`<span class="up">▲${diffPrevWeek}% 先週比</span>`:`<span class="down">▼${Math.abs(diffPrevWeek)}% 先週比</span>`):'<span class="neu">-- 先週比</span>'}
-          ${diffPrevMonth!==null?(diffPrevMonth>0?`<span class="up">▲${diffPrevMonth}% 先月同週比</span>`:`<span class="down">▼${Math.abs(diffPrevMonth)}% 先月同週比</span>`):'<span class="neu">-- 先月同週比</span>'}
+          ${diffPrevSameDay!==null?(diffPrevSameDay>0?`<span class="up">▲${diffPrevSameDay}% 先週同曜日比</span>`:`<span class="down">▼${Math.abs(diffPrevSameDay)}% 先週同曜日比</span>`):'<span class="neu">-- 先週同曜日比</span>'}
         </div>
       </div>
       <div class="stat-card"><div class="slabel">稼働日 / 件数</div><div class="sval">${activeDays}日 / ${weekC}件</div><div class="sdiff neu">日平均¥${avgDay.toLocaleString()}</div></div>
@@ -1494,7 +1494,7 @@ function renderWeek(){
       {labels:wf.map(r=>DAYS[new Date(r.date+'T00:00:00').getDay()]),
        datasets:[
          {label:'今週',data:wf.map(r=>totalOf(r)),backgroundColor:'rgba(6,193,103,.75)',borderColor:'#06C167',borderWidth:1},
-         {label:'先月同週',data:pmwf.map(r=>totalOf(r)),backgroundColor:'rgba(155,155,155,.4)',borderColor:'#999',borderWidth:1}
+         {label:'先週同曜日',data:pmwf.map(r=>totalOf(r)),backgroundColor:'rgba(155,155,155,.4)',borderColor:'#999',borderWidth:1}
        ]},
       {responsive:true,maintainAspectRatio:false,
        plugins:{legend:{labels:{font:{size:10},boxWidth:10}},tooltip:{callbacks:{label:c=>`¥${c.raw.toLocaleString()}`}}},
