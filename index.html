@@ -222,6 +222,30 @@ body{display:flex;flex-direction:column}
 .goal-forecast{background:rgba(186,117,23,0.1);border:0.5px solid #BA7517;border-radius:var(--radius);padding:10px 12px;margin-top:8px;font-size:12px;color:#BA7517;font-weight:600}
 /* 予測カード */
 .pred-factors{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+/* 確定申告 */
+.tax-toggle{display:flex;gap:8px;margin-bottom:16px}
+.tax-toggle button{flex:1;padding:10px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-size:13px;font-weight:600}
+.tax-toggle button.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.tax-input-block{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;background:var(--bg2)}
+.tax-input-block .tib-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px}
+.tax-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px}
+.tax-row label{font-size:13px;flex:1}
+.tax-row .tax-hint{font-size:10px;color:var(--text3);margin-top:1px}
+.tax-row input,.tax-row select{width:130px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);font-size:14px;text-align:right}
+.tax-result-block{border-radius:var(--radius-lg);padding:14px;margin-bottom:12px}
+.tax-result-block.income{background:rgba(6,193,103,0.08);border:0.5px solid rgba(6,193,103,0.3)}
+.tax-result-block.tax{background:rgba(233,30,99,0.06);border:0.5px solid rgba(233,30,99,0.2)}
+.tax-result-block.net{background:var(--bg2);border:0.5px solid var(--border)}
+.trb-title{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px}
+.trb-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:0.5px solid var(--border)}
+.trb-row:last-child{border-bottom:none}
+.trb-label{font-size:12px;color:var(--text2)}
+.trb-val{font-size:13px;font-weight:600}
+.trb-row.total .trb-label{font-size:13px;font-weight:700;color:var(--text)}
+.trb-row.total .trb-val{font-size:18px;font-weight:700}
+.tax-note{font-size:11px;color:var(--text3);line-height:1.6;padding:10px 12px;background:var(--bg2);border-radius:var(--radius);margin-bottom:8px;border-left:3px solid var(--border2)}
+.tax-note.warn{border-left-color:#BA7517;color:#BA7517}
+.tax-note.good{border-left-color:var(--uber);color:var(--text2)}
 /* キャラクターページ */
 .miru-stage{display:flex;flex-direction:column;align-items:center;padding:20px 0 10px}
 .miru-svg-wrap{position:relative;width:160px;height:160px;margin-bottom:16px}
@@ -383,6 +407,13 @@ body{display:flex;flex-direction:column}
     <div id="week-content"></div>
   </div>
 
+  <!-- ⑦ 確定申告ページ -->
+  <div id="page-tax" class="page">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">確定申告シミュレーター</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:16px">※概算です。正確な申告は税理士にご相談ください</div>
+    <div id="tax-content"></div>
+  </div>
+
   <!-- ⑥ キャラクターページ -->
   <div id="page-badge" class="page">
     <div style="font-size:15px;font-weight:600;margin-bottom:4px">ミルからのひとこと</div>
@@ -392,12 +423,15 @@ body{display:flex;flex-direction:column}
 
 </div>
 
+</div>
+
 <div class="bottom-nav">
   <button class="nav-item active" id="nav-entry"><i class="ti ti-plus"></i>入力</button>
   <button class="nav-item" id="nav-summary"><i class="ti ti-chart-bar"></i>分析</button>
   <button class="nav-item" id="nav-week"><i class="ti ti-calendar-week"></i>週次</button>
   <button class="nav-item" id="nav-cal"><i class="ti ti-calendar"></i>暦</button>
   <button class="nav-item" id="nav-year"><i class="ti ti-calendar-stats"></i>年間</button>
+  <button class="nav-item" id="nav-tax"><i class="ti ti-receipt-tax"></i>申告</button>
   <button class="nav-item" id="nav-badge"><i class="ti ti-mood-smile"></i>ミル</button>
 </div>
 
@@ -862,12 +896,13 @@ function updateViews(){
   if(document.getElementById('page-cal').classList.contains('active')) renderCal();
   if(document.getElementById('page-year').classList.contains('active')) renderYear();
   if(document.getElementById('page-week').classList.contains('active')) renderWeek();
+  if(document.getElementById('page-tax').classList.contains('active')) renderTax();
   if(document.getElementById('page-badge').classList.contains('active')) renderBadges();
 }
 
 // ── ページ切替 ────────────────────────────────
 function showPage(p){
-  ['entry','summary','cal','year','week','badge'].forEach(n=>{
+  ['entry','summary','cal','year','week','tax','badge'].forEach(n=>{
     document.getElementById('page-'+n).classList.toggle('active',n===p);
     const nav=document.getElementById('nav-'+n);
     if(nav) nav.classList.toggle('active',n===p);
@@ -876,6 +911,7 @@ function showPage(p){
   if(p==='cal')     renderCal();
   if(p==='year')    renderYear();
   if(p==='week')    renderWeek();
+  if(p==='tax')     renderTax();
   if(p==='badge')   renderBadges();
 }
 
@@ -1726,6 +1762,237 @@ function renderBadges(){
   document.querySelector('.miru-bubble').addEventListener('click', ()=>renderBadges());
 }
 
+// ── 確定申告シミュレーター ─────────────────────
+let taxState = {
+  type: 'blue', // 'blue'=青色申告 'white'=白色申告
+  year: new Date().getFullYear(),
+  otherIncome: 0,     // 給与など他の所得
+  gasoline: 0,        // ガソリン代
+  phone: 0,           // 通信費（按分後）
+  equipment: 0,       // 機材・消耗品
+  insurance: 0,       // 保険料（社会保険など）
+  pension: 0,         // 国民年金
+  lifeInsurance: 0,   // 生命保険料控除
+  medicalExp: 0,      // 医療費控除
+  dependents: 0,      // 扶養人数
+  blueDeduction: 650000, // 青色申告特別控除（65万 or 10万）
+};
+
+// 所得税率テーブル（2024年）
+function calcIncomeTax(taxableIncome){
+  if(taxableIncome <= 0) return 0;
+  const brackets = [
+    { limit: 1950000,  rate: 0.05, deduct: 0 },
+    { limit: 3300000,  rate: 0.10, deduct: 97500 },
+    { limit: 6950000,  rate: 0.20, deduct: 427500 },
+    { limit: 9000000,  rate: 0.23, deduct: 636000 },
+    { limit: 18000000, rate: 0.33, deduct: 1536000 },
+    { limit: 40000000, rate: 0.40, deduct: 2796000 },
+    { limit: Infinity, rate: 0.45, deduct: 4796000 },
+  ];
+  const b = brackets.find(b => taxableIncome <= b.limit);
+  return Math.floor(taxableIncome * b.rate - b.deduct);
+}
+
+function calcTax(){
+  const s = taxState;
+  const yearStr = String(s.year);
+  const yearSales = records.filter(r=>r.date.startsWith(yearStr)).reduce((sum,r)=>sum+totalOf(r),0);
+  const yearExpenses = Object.values(expenses).filter((_,i)=>Object.keys(expenses)[i].startsWith(yearStr)).reduce((sum,v)=>sum+v,0);
+
+  // 売上 - 経費
+  const gasolineY   = s.gasoline;
+  const phoneY      = s.phone;
+  const equipmentY  = s.equipment;
+  const totalExpense = gasolineY + phoneY + equipmentY + yearExpenses;
+  const businessIncome = Math.max(0, yearSales - totalExpense);
+
+  // 青色/白色特別控除
+  const specialDeduction = s.type==='blue' ? s.blueDeduction : 0;
+  const incomeAfterSpecial = Math.max(0, businessIncome - specialDeduction);
+
+  // 各種控除
+  const basicDeduction = 480000; // 基礎控除
+  const socialInsurance = s.insurance + s.pension;
+  // 生命保険料控除（上限12万）
+  const lifeInsCap = Math.min(s.lifeInsurance > 0 ? Math.floor(s.lifeInsurance/4)+20000 : 0, 120000);
+  // 扶養控除（1人38万、16〜18歳63万、19〜22歳63万 ※簡略化で一律38万）
+  const dependentDeduction = s.dependents * 380000;
+  // 医療費控除（10万超の部分、上限200万）
+  const medicalDeduction = Math.min(Math.max(0, s.medicalExp - 100000), 2000000);
+  // 他の所得（給与所得控除後の金額を概算）
+  const otherIncomeTaxable = s.otherIncome > 0 ? Math.max(0, s.otherIncome - Math.min(s.otherIncome*0.4, 650000)) : 0;
+
+  const totalDeductions = basicDeduction + socialInsurance + lifeInsCap + dependentDeduction + medicalDeduction;
+  const taxableIncome = Math.max(0, incomeAfterSpecial + otherIncomeTaxable - totalDeductions);
+  const incomeTax = calcIncomeTax(taxableIncome);
+  // 復興特別所得税（2.1%）
+  const recoveryTax = Math.floor(incomeTax * 0.021);
+  // 住民税（概算10%）
+  const residentTax = Math.floor(taxableIncome * 0.10);
+  // 国民健康保険（概算 所得×約10%）
+  const healthInsurance = s.insurance > 0 ? 0 : Math.floor(taxableIncome * 0.10);
+  const totalTax = incomeTax + recoveryTax + residentTax + healthInsurance;
+  const netIncome = businessIncome + otherIncomeTaxable - totalTax - socialInsurance;
+
+  return {
+    yearSales, totalExpense, businessIncome, specialDeduction,
+    incomeAfterSpecial, basicDeduction, socialInsurance, lifeInsCap,
+    dependentDeduction, medicalDeduction, otherIncomeTaxable, totalDeductions,
+    taxableIncome, incomeTax, recoveryTax, residentTax, healthInsurance,
+    totalTax, netIncome, taxableIncome
+  };
+}
+
+function renderTax(){
+  const s = taxState;
+  const t = calcTax();
+  const yearStr = String(s.year);
+  const yearSales = t.yearSales;
+  const estimatedFullYear = (() => {
+    const today2 = new Date();
+    const dayOfYear = Math.floor((today2 - new Date(today2.getFullYear(),0,0))/(1000*60*60*24));
+    return dayOfYear > 0 ? Math.round(yearSales / dayOfYear * 365) : yearSales;
+  })();
+
+  const v = (n) => `¥${Math.round(n).toLocaleString()}`;
+  const fmt = (n) => n>0?`<span style="color:var(--down)">-${v(n)}</span>`:`<span style="color:var(--text2)">¥0</span>`;
+
+  document.getElementById('tax-content').innerHTML = `
+    <!-- 申告種別 -->
+    <div class="tax-toggle">
+      <button class="${s.type==='blue'?'active':''}" id="tax-blue-btn">青色申告（65万控除）</button>
+      <button class="${s.type==='white'?'active':''}" id="tax-white-btn">白色申告</button>
+    </div>
+
+    ${s.type==='blue'?`
+    <div class="tax-note good">✅ 青色申告は事前に税務署への届出と複式簿記が必要です。e-Taxで申告すると65万円控除が受けられます。</div>
+    `:`
+    <div class="tax-note warn">⚠️ 白色申告は簡単ですが控除額が少なく、税負担が大きくなります。青色申告の届出を検討してみてください。</div>
+    `}
+
+    <!-- 対象年 -->
+    <div class="tax-input-block">
+      <div class="tib-title">対象年・売上</div>
+      <div class="tax-row">
+        <div><div>対象年</div></div>
+        <select id="tax-year">
+          ${[2024,2025,2026].map(y=>`<option value="${y}" ${s.year===y?'selected':''}>${y}年</option>`).join('')}
+        </select>
+      </div>
+      <div class="tax-row">
+        <div><div>配達売上（自動取得）</div><div class="tax-hint">${yearStr}年の記録から自動集計</div></div>
+        <div style="font-size:15px;font-weight:700;color:var(--uber)">${v(yearSales)}</div>
+      </div>
+      ${new Date().getFullYear()===s.year?`
+      <div class="tax-row">
+        <div><div>年収見込み（推定）</div><div class="tax-hint">今のペースで年末まで稼いだ場合</div></div>
+        <div style="font-size:13px;font-weight:600;color:#BA7517">${v(estimatedFullYear)}</div>
+      </div>`:''}
+    </div>
+
+    <!-- 経費入力 -->
+    <div class="tax-input-block">
+      <div class="tib-title">経費入力（年間合計）</div>
+      <div class="tax-row">
+        <div><div>ガソリン代</div><div class="tax-hint">業務使用分のみ</div></div>
+        <input type="number" id="tax-gas" value="${s.gasoline||''}" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="tax-row">
+        <div><div>通信費（按分後）</div><div class="tax-hint">スマホ代の業務割合分</div></div>
+        <input type="number" id="tax-phone" value="${s.phone||''}" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="tax-row">
+        <div><div>消耗品・機材費</div><div class="tax-hint">バッグ・ライト・修理代など</div></div>
+        <input type="number" id="tax-equip" value="${s.equipment||''}" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="tax-row">
+        <div><div>アプリ内経費合計</div><div class="tax-hint">各月の経費入力の合計</div></div>
+        <div style="font-size:13px;font-weight:600">${v(t.totalExpense - s.gasoline - s.phone - s.equipment)}</div>
+      </div>
+    </div>
+
+    <!-- 各種控除 -->
+    <div class="tax-input-block">
+      <div class="tib-title">各種控除・その他</div>
+      <div class="tax-row">
+        <div><div>給与など他の所得</div><div class="tax-hint">副業の場合は給与収入額</div></div>
+        <input type="number" id="tax-other" value="${s.otherIncome||''}" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="tax-row">
+        <div><div>国民年金保険料</div><div class="tax-hint">年間約¥199,320（2024年）</div></div>
+        <input type="number" id="tax-pension" value="${s.pension||''}" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="tax-row">
+        <div><div>国民健康保険料</div><div class="tax-hint">市区町村から届く納付書で確認</div></div>
+        <input type="number" id="tax-ins" value="${s.insurance||''}" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="tax-row">
+        <div><div>生命保険料（年間）</div><div class="tax-hint">控除証明書に記載の金額</div></div>
+        <input type="number" id="tax-life" value="${s.lifeInsurance||''}" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="tax-row">
+        <div><div>医療費（年間合計）</div><div class="tax-hint">10万円超の部分が控除対象</div></div>
+        <input type="number" id="tax-med" value="${s.medicalExp||''}" placeholder="0" inputmode="numeric">
+      </div>
+      <div class="tax-row">
+        <div><div>扶養家族の人数</div><div class="tax-hint">16歳以上の扶養親族</div></div>
+        <input type="number" id="tax-dep" value="${s.dependents||''}" placeholder="0" inputmode="numeric" style="width:80px">
+      </div>
+    </div>
+
+    <!-- 計算結果 -->
+    <div class="section-title">計算結果（概算）</div>
+
+    <div class="tax-result-block income">
+      <div class="trb-title">収入・所得</div>
+      <div class="trb-row"><span class="trb-label">事業収入（配達売上）</span><span class="trb-val">${v(yearSales)}</span></div>
+      <div class="trb-row"><span class="trb-label">経費合計</span><span class="trb-val" style="color:var(--down)">-${v(t.totalExpense)}</span></div>
+      ${s.type==='blue'?`<div class="trb-row"><span class="trb-label">青色申告特別控除</span><span class="trb-val" style="color:var(--down)">-${v(t.specialDeduction)}</span></div>`:''}
+      ${t.otherIncomeTaxable>0?`<div class="trb-row"><span class="trb-label">給与所得（概算）</span><span class="trb-val">+${v(t.otherIncomeTaxable)}</span></div>`:''}
+      <div class="trb-row total"><span class="trb-label">事業所得</span><span class="trb-val" style="color:var(--uber)">${v(t.businessIncome)}</span></div>
+    </div>
+
+    <div class="tax-result-block tax">
+      <div class="trb-title">控除・税額</div>
+      <div class="trb-row"><span class="trb-label">基礎控除</span><span class="trb-val">${v(t.basicDeduction)}</span></div>
+      ${t.socialInsurance>0?`<div class="trb-row"><span class="trb-label">社会保険料控除</span><span class="trb-val">${v(t.socialInsurance)}</span></div>`:''}
+      ${t.lifeInsCap>0?`<div class="trb-row"><span class="trb-label">生命保険料控除</span><span class="trb-val">${v(t.lifeInsCap)}</span></div>`:''}
+      ${t.dependentDeduction>0?`<div class="trb-row"><span class="trb-label">扶養控除</span><span class="trb-val">${v(t.dependentDeduction)}</span></div>`:''}
+      ${t.medicalDeduction>0?`<div class="trb-row"><span class="trb-label">医療費控除</span><span class="trb-val">${v(t.medicalDeduction)}</span></div>`:''}
+      <div class="trb-row"><span class="trb-label">課税所得</span><span class="trb-val" style="color:var(--down)">${v(t.taxableIncome)}</span></div>
+      <div class="trb-row"><span class="trb-label">所得税</span><span class="trb-val" style="color:var(--down)">${v(t.incomeTax)}</span></div>
+      <div class="trb-row"><span class="trb-label">復興特別所得税（2.1%）</span><span class="trb-val" style="color:var(--down)">${v(t.recoveryTax)}</span></div>
+      <div class="trb-row"><span class="trb-label">住民税（概算10%）</span><span class="trb-val" style="color:var(--down)">${v(t.residentTax)}</span></div>
+      ${s.insurance===0?`<div class="trb-row"><span class="trb-label">国民健康保険（概算）</span><span class="trb-val" style="color:var(--down)">${v(t.healthInsurance)}</span></div>`:''}
+      <div class="trb-row total"><span class="trb-label">税金合計</span><span class="trb-val" style="color:var(--down)">${v(t.totalTax)}</span></div>
+    </div>
+
+    <div class="tax-result-block net">
+      <div class="trb-title">手取り概算</div>
+      <div class="trb-row total"><span class="trb-label">手取り額</span><span class="trb-val" style="color:var(--uber);font-size:22px">${v(t.netIncome)}</span></div>
+      <div class="trb-row"><span class="trb-label">実効税率</span><span class="trb-val">${t.businessIncome>0?Math.round(t.totalTax/t.businessIncome*100):0}%</span></div>
+    </div>
+
+    <div class="tax-note">📌 この計算はあくまで概算です。ふるさと納税・iDeCo・住宅ローン控除などは含まれていません。正確な申告額は国税庁の確定申告書等作成コーナーまたは税理士にご確認ください。</div>
+    ${t.taxableIncome > 0 && s.type==='white'?`<div class="tax-note warn">💡 青色申告に切り替えると約${v(calcIncomeTax(Math.max(0,t.taxableIncome-650000)) - t.incomeTax + Math.floor((calcIncomeTax(Math.max(0,t.taxableIncome-650000)) - t.incomeTax)*0.021) + Math.floor(650000*0.1))}の節税になる可能性があります。</div>`:''}
+  `;
+
+  // イベント登録
+  document.getElementById('tax-blue-btn').addEventListener('click',()=>{ taxState.type='blue'; renderTax(); });
+  document.getElementById('tax-white-btn').addEventListener('click',()=>{ taxState.type='white'; renderTax(); });
+  document.getElementById('tax-year').addEventListener('change',e=>{ taxState.year=+e.target.value; renderTax(); });
+  const fields=[
+    ['tax-gas','gasoline'],['tax-phone','phone'],['tax-equip','equipment'],
+    ['tax-other','otherIncome'],['tax-pension','pension'],['tax-ins','insurance'],
+    ['tax-life','lifeInsurance'],['tax-med','medicalExp'],['tax-dep','dependents']
+  ];
+  fields.forEach(([id,key])=>{
+    const el=document.getElementById(id);
+    if(el) el.addEventListener('input',e=>{ taxState[key]=+e.target.value||0; renderTax(); });
+  });
+}
+
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
@@ -1756,6 +2023,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('nav-cal').addEventListener('click',()=>showPage('cal'));
   document.getElementById('nav-week').addEventListener('click',()=>showPage('week'));
   document.getElementById('nav-year').addEventListener('click',()=>showPage('year'));
+  document.getElementById('nav-tax').addEventListener('click',()=>showPage('tax'));
   document.getElementById('nav-badge').addEventListener('click',()=>showPage('badge'));
   document.getElementById('inp-date').addEventListener('change',e=>loadEntryForDate(e.target.value));
 
