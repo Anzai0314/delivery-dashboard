@@ -1053,9 +1053,15 @@ function renderSummary(){
 
   const wStats={};
   f.forEach(r=>{const w=r.weather||'sunny';if(!wStats[w])wStats[w]={sales:0,count:0,days:0};wStats[w].sales+=totalOf(r);wStats[w].count+=countOf(r);if(totalOf(r)>0)wStats[w].days++;});
+  // 曜日別：2026年1月1日以降のデータを基準
   const dowStats=Array(7).fill(null).map(()=>({sales:0,count:0,days:0}));
-  records.filter(r=>totalOf(r)>0).forEach(r=>{const dow=new Date(r.date+'T00:00:00').getDay();dowStats[dow].sales+=totalOf(r);dowStats[dow].count+=countOf(r);dowStats[dow].days++;});
+  records.filter(r=>r.date>=BASE_DATE&&totalOf(r)>0).forEach(r=>{const dow=new Date(r.date+'T00:00:00').getDay();dowStats[dow].sales+=totalOf(r);dowStats[dow].count+=countOf(r);dowStats[dow].days++;});
   const maxDowSales=Math.max(...dowStats.map(d=>d.days?Math.round(d.sales/d.days):0),1);
+  // 平均時給：セッション計測開始日（2026年6月9日）以降のデータを使用
+  const HOURLY_BASE='2026-06-09';
+  const hoursAllBase=records.filter(r=>r.date>=HOURLY_BASE).reduce((s,r)=>s+hoursOf(r),0);
+  const salesForHourly=records.filter(r=>r.date>=HOURLY_BASE).reduce((s,r)=>s+totalOf(r),0);
+  const avgHourlyAll=hoursAllBase>0?Math.round(salesForHourly/hoursAllBase):0;
   const recentMonths=[];
   for(let i=5;i>=0;i--){const d=new Date(y,m-1-i,1);recentMonths.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);}
   const top5=[...f].sort((a,b)=>totalOf(b)-totalOf(a)).slice(0,5);
@@ -1179,7 +1185,7 @@ function renderSummary(){
       <div class="stat-card"><div class="slabel">総件数</div><div class="sval">${curC}件</div><div class="sdiff">${diffHtml(curC,prevC,'前月比')}${diffHtml(curC,lyC,'前年比')}</div></div>
       <div class="stat-card"><div class="slabel">稼働日平均売上</div><div class="sval">¥${avgDaySales.toLocaleString()}</div><div class="sdiff neu">${active.length}日稼働</div></div>
       <div class="stat-card"><div class="slabel">稼働日平均件数</div><div class="sval">${avgActCount}件</div><div class="sdiff neu">単価¥${avgUnit.toLocaleString()}</div></div>
-      ${avgHourly?`<div class="stat-card"><div class="slabel">平均時給</div><div class="sval up">¥${avgHourly.toLocaleString()}</div><div class="sdiff neu">計${hoursAll.toFixed(1)}h稼働</div></div>`:''}
+      ${avgHourlyAll>0?`<div class="stat-card"><div class="slabel">平均時給（6/9〜）</div><div class="sval up">¥${avgHourlyAll.toLocaleString()}</div><div class="sdiff neu">計${hoursAllBase.toFixed(1)}h稼働</div></div>`:''}
       <div class="stat-card"><div class="slabel">連続稼働</div><div class="sval">${streak}日</div><div class="sdiff neu">現在の連続記録</div></div>
     </div>
     <div class="year-banner"><div><div class="yl">${y}年 累計売上</div><div class="yv">¥${yearS.toLocaleString()}</div></div><div style="text-align:right"><div class="yl">累計件数</div><div style="font-size:16px;font-weight:600">${yearC}件</div></div></div>
