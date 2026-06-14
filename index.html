@@ -950,35 +950,41 @@ const TIME_SLOTS = [
 
 function calcTimeSlotHourly(records){
   const slotData = {};
-  TIME_SLOTS.forEach(s => { slotData[s.key] = { mins:0, sales:0, days:0 }; });
+  TIME_SLOTS.forEach(s => { slotData[s.key] = { mins:0, sales:0 }; });
 
   records.filter(r => totalOf(r)>0 && r.sessions && r.sessions.length).forEach(r => {
-    const totalMins = r.sessions.filter(s=>s.depart&&s.return).reduce((sum,s)=>{
+    const completedSessions = r.sessions.filter(s=>s.depart&&s.return);
+    if(!completedSessions.length) return;
+
+    // この日の総稼働分数
+    const totalMins = completedSessions.reduce((sum,s)=>{
       const[dh,dm]=s.depart.split(':').map(Number);
       const[rh,rm]=s.return.split(':').map(Number);
       return sum+Math.max(0,(rh*60+rm)-(dh*60+dm));
     },0);
     if(!totalMins) return;
-    const sales = totalOf(r);
 
-    r.sessions.filter(s=>s.depart&&s.return).forEach(sess=>{
+    const daySales = totalOf(r);
+
+    completedSessions.forEach(sess=>{
       const[dh,dm]=sess.depart.split(':').map(Number);
       const[rh,rm]=sess.return.split(':').map(Number);
       const sessStart = dh*60+dm;
       const sessEnd   = rh*60+rm;
-      if(sessEnd <= sessStart) return;
+      const sessMins  = sessEnd - sessStart;
+      if(sessMins <= 0) return;
+
+      // このセッションに配分される売上（日の売上 × セッション時間比率）
+      const sessSales = daySales * (sessMins / totalMins);
 
       TIME_SLOTS.forEach(slot=>{
         const slotStart = slot.start*60;
         const slotEnd   = slot.end*60;
         const overlap   = Math.max(0, Math.min(sessEnd,slotEnd)-Math.max(sessStart,slotStart));
         if(overlap > 0){
-          // このセッション内でスロットが占める割合で売上を配分
-          const ratio = overlap / (sessEnd - sessStart);
-          const sessMins = sessEnd - sessStart;
-          const sessRatio = sessMins / totalMins;
+          // スロットとセッションの重複時間比率でセッション売上をさらに配分
           slotData[slot.key].mins  += overlap;
-          slotData[slot.key].sales += sales * (overlap / (sessEnd - sessStart)) * sessRatio / sessRatio;
+          slotData[slot.key].sales += sessSales * (overlap / sessMins);
         }
       });
     });
