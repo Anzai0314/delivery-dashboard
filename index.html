@@ -439,7 +439,7 @@ body{display:flex;flex-direction:column}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCKZfC6PtJFVEIgNYEy5nIxrtaw68rinRo",
@@ -955,7 +955,16 @@ async function saveRecord(silent=false){
   }catch(e){ if(!silent) showToast('保存に失敗しました'); }
 }
 
-async function saveExpense(month,amount){try{await setDoc(doc(db,'monthly_expenses',month),{amount:Number(amount)||0});}catch(e){}}
+async function saveTaxState(){
+  try{ await setDoc(doc(db,'tax_settings','default'), taxState); }catch(e){}
+}
+
+async function loadTaxState(){
+  try{
+    const snap = await getDoc(doc(db,'tax_settings','default'));
+    if(snap.exists()) Object.assign(taxState, snap.data());
+  }catch(e){}
+}
 async function saveGoal(month,amount){try{await setDoc(doc(db,'monthly_goals',month),{amount:Number(amount)||0});}catch(e){}}
 
 // ── CSV ───────────────────────────────────────
@@ -1979,9 +1988,9 @@ function renderTax(){
   `;
 
   // イベント登録
-  document.getElementById('tax-blue-btn').addEventListener('click',()=>{ taxState.type='blue'; renderTax(); });
-  document.getElementById('tax-white-btn').addEventListener('click',()=>{ taxState.type='white'; renderTax(); });
-  document.getElementById('tax-year').addEventListener('change',e=>{ taxState.year=+e.target.value; renderTax(); });
+  document.getElementById('tax-blue-btn').addEventListener('click',()=>{ taxState.type='blue'; saveTaxState(); renderTax(); });
+  document.getElementById('tax-white-btn').addEventListener('click',()=>{ taxState.type='white'; saveTaxState(); renderTax(); });
+  document.getElementById('tax-year').addEventListener('change',e=>{ taxState.year=+e.target.value; saveTaxState(); renderTax(); });
   const fields=[
     ['tax-gas','gasoline'],['tax-phone','phone'],['tax-equip','equipment'],
     ['tax-other','otherIncome'],['tax-pension','pension'],['tax-ins','insurance'],
@@ -1989,7 +1998,7 @@ function renderTax(){
   ];
   fields.forEach(([id,key])=>{
     const el=document.getElementById(id);
-    if(el) el.addEventListener('change',e=>{ taxState[key]=+e.target.value||0; renderTax(); });
+    if(el) el.addEventListener('change',e=>{ taxState[key]=+e.target.value||0; saveTaxState(); renderTax(); });
   });
 }
 
@@ -2000,7 +2009,7 @@ function showToast(msg){
 }
 
 // ── 初期化 ───────────────────────────────────
-document.addEventListener('DOMContentLoaded',()=>{
+document.addEventListener('DOMContentLoaded', async ()=>{
   const today=todayStr();
   document.getElementById('inp-date').value=today;
   sessionDate=today;
@@ -2037,6 +2046,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('inp-note').addEventListener('change',scheduleAutoSave);
 
   fetchForecast();
+  await loadTaxState();
   listenToDatabase();
 });
 </script>
