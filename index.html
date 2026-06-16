@@ -255,6 +255,20 @@ body{display:flex;flex-direction:column}
 .miru-status{font-size:12px;font-weight:700;padding:4px 14px;border-radius:20px;margin-bottom:10px;display:inline-block}
 .miru-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:8px}
 .miru-tap-hint{font-size:11px;color:var(--text3);margin-top:8px}
+/* ニュース */
+.news-card{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px;margin-bottom:8px;cursor:pointer;text-decoration:none;display:block;color:var(--text)}
+.news-card:active{background:var(--bg2)}
+.news-source{font-size:10px;color:var(--text3);margin-bottom:4px;display:flex;align-items:center;gap:5px}
+.news-title{font-size:13px;font-weight:600;line-height:1.5;margin-bottom:4px}
+.news-date{font-size:10px;color:var(--text3)}
+.news-loading{text-align:center;padding:2rem;color:var(--text2);font-size:13px}
+.news-tag{display:inline-block;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:600;margin-right:4px}
+.tag-uber{background:#d4f5e3;color:#0a5c30}
+.tag-demae{background:#fde8d4;color:#8c3a00}
+.tag-delivery{background:#e8eeff;color:#1a3ab8}
+.news-filter{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.news-filter button{padding:5px 12px;border-radius:20px;border:0.5px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-size:12px}
+.news-filter button.active{background:var(--text);color:var(--bg);border-color:var(--text)}
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1}
 </style>
@@ -359,6 +373,12 @@ body{display:flex;flex-direction:column}
         <label>メモ（イベント・特記事項など）</label>
         <textarea id="inp-note" placeholder="例：雨天・花火大会・渋滞あり"></textarea>
       </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+        <label style="font-size:11px;color:var(--text2);white-space:nowrap">本日の走行距離</label>
+        <input type="number" id="inp-distance" placeholder="0" inputmode="decimal" step="0.1"
+          style="flex:1;padding:9px 10px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px">
+        <span style="font-size:13px;color:var(--text2)">km</span>
+      </div>
     </div>
     <button class="save-btn" id="btn-save"><i class="ti ti-device-floppy"></i> 保存する</button>
   </div>
@@ -414,6 +434,19 @@ body{display:flex;flex-direction:column}
     <div id="tax-content"></div>
   </div>
 
+  <!-- ⑧ ニュースページ -->
+  <div id="page-news" class="page">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">フードデリバリーニュース</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:12px">配達員に関わる最新情報</div>
+    <div class="news-filter">
+      <button class="active" id="news-all">すべて</button>
+      <button id="news-uber">Uber Eats</button>
+      <button id="news-demae">出前館</button>
+      <button id="news-gig">ギグワーク</button>
+    </div>
+    <div id="news-content"><div class="news-loading">ニュースを取得中...</div></div>
+  </div>
+
   <!-- ⑥ キャラクターページ -->
   <div id="page-badge" class="page">
     <div style="font-size:15px;font-weight:600;margin-bottom:4px">ミルからのひとこと</div>
@@ -432,6 +465,7 @@ body{display:flex;flex-direction:column}
   <button class="nav-item" id="nav-cal"><i class="ti ti-calendar"></i>暦</button>
   <button class="nav-item" id="nav-year"><i class="ti ti-calendar-stats"></i>年間</button>
   <button class="nav-item" id="nav-tax"><i class="ti ti-receipt-tax"></i>申告</button>
+  <button class="nav-item" id="nav-news"><i class="ti ti-news"></i>ニュース</button>
   <button class="nav-item" id="nav-badge"><i class="ti ti-mood-smile"></i>ミル</button>
 </div>
 
@@ -850,12 +884,14 @@ function loadEntryForDate(date){
     document.getElementById('rocket-c').value=ex.rocket.count||'';
     document.getElementById('inp-weather').value=ex.weather||'sunny';
     document.getElementById('inp-note').value=ex.note||'';
+    document.getElementById('inp-distance').value=ex.distance||'';
     hint.textContent='✓ 保存済みデータを読み込みました（上書き保存できます）';
     hint.className='entry-hint show loaded';
   }else{
     inputIds.forEach(id=>document.getElementById(id).value='');
     document.getElementById('inp-weather').value='sunny';
     document.getElementById('inp-note').value='';
+    document.getElementById('inp-distance').value='';
     hint.textContent=''; hint.className='entry-hint';
   }
   loadSessions(date);
@@ -902,7 +938,7 @@ function updateViews(){
 
 // ── ページ切替 ────────────────────────────────
 function showPage(p){
-  ['entry','summary','cal','year','week','tax','badge'].forEach(n=>{
+  ['entry','summary','cal','year','week','tax','news','badge'].forEach(n=>{
     document.getElementById('page-'+n).classList.toggle('active',n===p);
     const nav=document.getElementById('nav-'+n);
     if(nav) nav.classList.toggle('active',n===p);
@@ -912,6 +948,7 @@ function showPage(p){
   if(p==='year')    renderYear();
   if(p==='week')    renderWeek();
   if(p==='tax')     renderTax();
+  if(p==='news')    fetchNews();
   if(p==='badge')   renderBadges();
 }
 
@@ -941,6 +978,7 @@ async function saveRecord(silent=false){
     demae: {sales:+document.getElementById('demae-s').value||0,count:+document.getElementById('demae-c').value||0},
     rocket:{sales:+document.getElementById('rocket-s').value||0,count:+document.getElementById('rocket-c').value||0},
     sessions: sessions.filter(s=>s.depart),
+    distance: +document.getElementById('inp-distance').value||0,
     note: document.getElementById('inp-note').value||''
   };
   try{
@@ -1238,6 +1276,7 @@ function renderSummary(){
       <div class="stat-card"><div class="slabel">稼働日平均件数</div><div class="sval">${avgActCount}件</div><div class="sdiff neu">単価¥${avgUnit.toLocaleString()}</div></div>
       ${avgHourlyAll>0?`<div class="stat-card"><div class="slabel">平均時給（6/9〜）</div><div class="sval up">¥${avgHourlyAll.toLocaleString()}</div><div class="sdiff neu">計${hoursAllBase.toFixed(1)}h稼働</div></div>`:''}
       <div class="stat-card"><div class="slabel">連続稼働</div><div class="sval">${streak}日</div><div class="sdiff neu">現在の連続記録</div></div>
+      ${(()=>{const dist=f.reduce((s,r)=>s+(r.distance||0),0);return dist>0?`<div class="stat-card"><div class="slabel">今月の走行距離</div><div class="sval">${dist.toFixed(1)}km</div><div class="sdiff neu">1日平均${active>0?(dist/active).toFixed(1):0}km</div></div>`:''})()}
     </div>
     <div class="year-banner"><div><div class="yl">${y}年 累計売上</div><div class="yv">¥${yearS.toLocaleString()}</div></div><div style="text-align:right"><div class="yl">累計件数</div><div style="font-size:16px;font-weight:600">${yearC}件</div></div></div>
     <div class="section-title">プラットフォーム別</div>${platRows}
@@ -1420,6 +1459,7 @@ function renderYear(){
       <div class="stat-card"><div class="slabel">稼働日数</div><div class="sval">${activeYDays}日</div></div>
       ${yearHW?`<div class="stat-card"><div class="slabel">年間平均時給</div><div class="sval up">¥${yearHW.toLocaleString()}</div><div class="sdiff neu">計${yearH.toFixed(0)}h稼働</div></div>`:''}
       <div class="stat-card"><div class="slabel">1日平均売上</div><div class="sval">¥${activeYDays?Math.round(yearS/activeYDays).toLocaleString():0}</div></div>
+      ${(()=>{const dist=yf.reduce((s,r)=>s+(r.distance||0),0);return dist>0?`<div class="stat-card"><div class="slabel">年間走行距離</div><div class="sval">${dist.toFixed(0)}km</div><div class="sdiff neu">1日平均${activeYDays>0?(dist/activeYDays).toFixed(1):0}km</div></div>`:''})()}
     </div>
     <div class="section-title">月別売上</div>
     <div style="position:relative;width:100%;height:160px;margin-bottom:12px"><canvas id="chart-year"></canvas></div>
@@ -1771,7 +1811,134 @@ function renderBadges(){
   document.querySelector('.miru-bubble').addEventListener('click', ()=>renderBadges());
 }
 
-// ── 確定申告シミュレーター ─────────────────────
+// ── ニュースページ ────────────────────────────
+let newsCache = null;
+let newsFilter = 'all';
+
+const NEWS_SOURCES = [
+  { url:'https://rss.itmedia.co.jp/rss/2.0/itmedia_news.xml',      name:'ITmedia' },
+  { url:'https://feed.infoq.com/jp',                                name:'InfoQ' },
+  { url:'https://www.nikkei.com/rss/news.rss',                      name:'日経新聞' },
+];
+const NEWS_KEYWORDS = {
+  all:   ['ウーバーイーツ','uber eats','出前館','フードデリバリー','フード宅配','配達員','ギグワーク','宅配','デリバリー','ロケットナウ'],
+  uber:  ['ウーバーイーツ','uber eats','ウーバー'],
+  demae: ['出前館'],
+  gig:   ['ギグワーク','フリーランス','配達員','個人事業主'],
+};
+
+async function fetchNews(){
+  const container = document.getElementById('news-content');
+  if(!container) return;
+  if(newsCache){
+    renderNews(newsCache); return;
+  }
+  container.innerHTML = '<div class="news-loading">📡 ニュースを取得中...</div>';
+
+  const PROXY = 'https://api.allorigins.win/get?url=';
+  let allItems = [];
+
+  await Promise.allSettled(NEWS_SOURCES.map(async src => {
+    try{
+      const res = await fetch(PROXY + encodeURIComponent(src.url), {signal: AbortSignal.timeout(8000)});
+      const data = await res.json();
+      const xml = new DOMParser().parseFromString(data.contents, 'text/xml');
+      const items = [...xml.querySelectorAll('item')].slice(0,20);
+      items.forEach(item => {
+        const title   = item.querySelector('title')?.textContent||'';
+        const link    = item.querySelector('link')?.textContent||'';
+        const pubDate = item.querySelector('pubDate')?.textContent||'';
+        const desc    = item.querySelector('description')?.textContent||'';
+        const keywords = NEWS_KEYWORDS.all;
+        const titleLower = (title+desc).toLowerCase();
+        const matched = keywords.some(k => titleLower.includes(k.toLowerCase()));
+        if(matched){
+          allItems.push({ title, link, pubDate, source: src.name, desc });
+        }
+      });
+    }catch(e){}
+  }));
+
+  // 日付でソート
+  allItems.sort((a,b) => new Date(b.pubDate)-new Date(a.pubDate));
+
+  // 重複除去
+  const seen = new Set();
+  allItems = allItems.filter(item => {
+    const key = item.title.slice(0,20);
+    if(seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+
+  if(!allItems.length){
+    // RSSが取れない場合はGoogle News検索リンクにフォールバック
+    container.innerHTML = `
+      <div style="text-align:center;padding:2rem;color:var(--text2);font-size:13px">
+        <div style="font-size:24px;margin-bottom:8px">📰</div>
+        RSSの取得ができませんでした<br>
+        <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+          ${[
+            ['フードデリバリー 最新ニュース','フードデリバリー'],
+            ['ウーバーイーツ ニュース','ウーバーイーツ'],
+            ['出前館 ニュース','出前館'],
+            ['配達員 ギグワーク','ギグワーク'],
+          ].map(([q,label])=>`<a href="https://news.google.com/search?q=${encodeURIComponent(q)}&hl=ja" target="_blank"
+            style="display:block;padding:10px 14px;background:var(--bg2);border-radius:var(--radius);color:var(--text);text-decoration:none;font-size:13px;font-weight:600">
+            🔍 ${label}のニュースを検索
+          </a>`).join('')}
+        </div>
+      </div>`;
+    return;
+  }
+
+  newsCache = allItems;
+  renderNews(allItems);
+}
+
+function renderNews(items){
+  const container = document.getElementById('news-content');
+  if(!container) return;
+  const kw = NEWS_KEYWORDS[newsFilter]||NEWS_KEYWORDS.all;
+  const filtered = newsFilter==='all' ? items : items.filter(item =>
+    kw.some(k=>(item.title+item.desc).toLowerCase().includes(k.toLowerCase()))
+  );
+
+  if(!filtered.length){
+    container.innerHTML='<div class="news-loading">該当するニュースがありません</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(item => {
+    const d = item.pubDate ? new Date(item.pubDate) : null;
+    const dateStr = d && !isNaN(d) ? `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}` : '';
+    // タグ判定
+    const tl = (item.title+item.desc).toLowerCase();
+    const tags = [];
+    if(NEWS_KEYWORDS.uber.some(k=>tl.includes(k.toLowerCase()))) tags.push('<span class="news-tag tag-uber">Uber Eats</span>');
+    if(NEWS_KEYWORDS.demae.some(k=>tl.includes(k.toLowerCase()))) tags.push('<span class="news-tag tag-demae">出前館</span>');
+    if(!tags.length) tags.push('<span class="news-tag tag-delivery">デリバリー</span>');
+    return `<a class="news-card" href="${item.link}" target="_blank" rel="noopener">
+      <div class="news-source"><i class="ti ti-rss"></i>${item.source}</div>
+      <div>${tags.join('')}</div>
+      <div class="news-title">${item.title}</div>
+      <div class="news-date">${dateStr}</div>
+    </a>`;
+  }).join('');
+}
+
+function initNewsFilters(){
+  ['all','uber','demae','gig'].forEach(f=>{
+    const btn = document.getElementById('news-'+f);
+    if(!btn) return;
+    btn.addEventListener('click',()=>{
+      newsFilter=f;
+      document.querySelectorAll('.news-filter button').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      if(newsCache) renderNews(newsCache);
+      else fetchNews();
+    });
+  });
+}
 let taxState = {
   type: 'blue', // 'blue'=青色申告 'white'=白色申告
   year: new Date().getFullYear(),
@@ -2033,7 +2200,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('nav-week').addEventListener('click',()=>showPage('week'));
   document.getElementById('nav-year').addEventListener('click',()=>showPage('year'));
   document.getElementById('nav-tax').addEventListener('click',()=>showPage('tax'));
+  document.getElementById('nav-news').addEventListener('click',()=>showPage('news'));
   document.getElementById('nav-badge').addEventListener('click',()=>showPage('badge'));
+  initNewsFilters();
   document.getElementById('inp-date').addEventListener('change',e=>loadEntryForDate(e.target.value));
 
   // 数値入力：inputでリアルタイム表示更新、changeで自動保存
