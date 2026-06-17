@@ -475,6 +475,7 @@ let chartInstances = {};
 // sessions = [ {depart:"HH:MM", return:"HH:MM"|null}, ... ]
 let sessions = [];
 let sessionDate = '';
+let todayKcal = 0;
 
 const wmap  = { sunny:'☀️ 晴れ', cloudy:'⛅ 曇り', rainy:'🌧️ 雨', 'heavy-rain':'⛈️ 大雨', snowy:'❄️ 雪' };
 const wmapS = { sunny:'☀️', cloudy:'⛅', rainy:'🌧️', 'heavy-rain':'⛈️', snowy:'❄️' };
@@ -824,22 +825,24 @@ function updateDailyTotal(){
   document.getElementById('dtb-unit').textContent=count>0?`単価 ¥${unit.toLocaleString()}`:'単価 --';
   document.getElementById('dtb-hours').textContent=hrs>0?fmtHours(hrs):'--';
   document.getElementById('dtb-hourly').textContent=hrs>0&&total>0?`時給 ¥${Math.round(total/hrs).toLocaleString()}`:'時給 --';
-  // 走行距離・1km単価・消費カロリー
+  // 走行距離・1km単価・消費カロリー（この日のkcalをそのままFirebaseに保存する）
   const distEl=document.getElementById('dtb-dist');
-  if(distEl){
-    if(dist>0){
-      const perKm=total>0?Math.round(total/dist):0;
-      const estHrs=hrs>0?hrs:dist/15;
-      const kcal=Math.round(6.0*80*estHrs);
+  if(dist>0){
+    const perKm=total>0?Math.round(total/dist):0;
+    const estHrs=hrs>0?hrs:dist/15;
+    const kcal=Math.round(6.0*80*estHrs);
+    todayKcal = kcal; // saveRecordで使用
+    if(distEl){
       distEl.innerHTML=`
         <span style="margin-right:10px">🚴 ${dist}km</span>
         ${perKm>0?`<span style="margin-right:10px;color:var(--uber)">¥${perKm}/km</span>`:''}
         <span style="color:#FF6B00">🔥 ${kcal}kcal</span>
       `;
       distEl.style.display='flex';
-    } else {
-      distEl.style.display='none';
     }
+  } else {
+    todayKcal = 0;
+    if(distEl) distEl.style.display='none';
   }
   updateLastMonthBar(total);
 }
@@ -972,6 +975,7 @@ async function saveRecord(silent=false){
     rocket:{sales:+document.getElementById('rocket-s').value||0,count:+document.getElementById('rocket-c').value||0},
     sessions: sessions.filter(s=>s.depart),
     distance: +document.getElementById('inp-distance').value||0,
+    kcal: todayKcal||0,
     note: document.getElementById('inp-note').value||''
   };
   try{
@@ -1112,19 +1116,10 @@ function renderSummary(){
   const passed=today2.toISOString().slice(0,7)===month?today2.getDate():totalDays;
   const dailyAvg=curS/(passed||1);
 
-  // ── 走行距離・1km単価・消費カロリー ──
+  // ── 走行距離・1km単価・消費カロリー（入力時に保存したkcalを単純合算）──
   const monthDist = f.reduce((s,r)=>s+(r.distance||0), 0);
   const perKm     = monthDist>0 ? Math.round(curS/monthDist) : 0;
-  // 消費カロリー：自転車中程度 METs=6.0, 体重80kg
-  // 6月9日（稼働時間計測開始日）以降のデータのみを対象にする
-  const METS=6.0, WEIGHT=80, AVG_SPEED=15;
-  const monthHours = f.filter(r=>r.date>=HOURLY_BASE).reduce((s,r)=>{
-    const h=hoursOf(r);
-    if(h>0) return s+h;
-    const dist=r.distance||0;
-    return s+(dist>0?dist/AVG_SPEED:0);
-  },0);
-  const monthKcal = Math.round(METS * WEIGHT * monthHours);
+  const monthKcal = f.reduce((s,r)=>s+(r.kcal||0), 0);
   const todayDay = today2.toISOString().slice(0,7)===month ? today2.getDate() : totalDays;
   // 今月の todayDay 日まで（1〜todayDay）の売上合計
   const curPace = f.filter(r=>+r.date.slice(8)<=todayDay).reduce((s,r)=>s+totalOf(r),0);
@@ -1445,16 +1440,9 @@ function renderYear(){
   const prevYS=records.filter(r=>r.date.startsWith(String(Number(year)-1))).reduce((s,r)=>s+totalOf(r),0);
   const[y]=year.split('').map(Number);
 
-  // ── 走行距離・1km単価・消費カロリー（年間） ──
-  const METS=6.0, WEIGHT=80, AVG_SPEED=15;
+  // ── 走行距離・1km単価・消費カロリー（年間・単純合算） ──
   const yearDist = yf.reduce((s,r)=>s+(r.distance||0), 0);
-  const yearHoursForKcal = yf.filter(r=>r.date>=HOURLY_BASE).reduce((s,r)=>{
-    const h=hoursOf(r);
-    if(h>0) return s+h;
-    const dist=r.distance||0;
-    return s+(dist>0?dist/AVG_SPEED:0);
-  },0);
-  const yearKcal = Math.round(METS * WEIGHT * yearHoursForKcal);
+  const yearKcal = yf.reduce((s,r)=>s+(r.kcal||0), 0);
 
   const months=Array.from({length:12},(_,i)=>{
     const mo=`${year}-${String(i+1).padStart(2,'0')}`;
