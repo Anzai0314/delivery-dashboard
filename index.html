@@ -307,6 +307,8 @@ body{display:flex;flex-direction:column}
         <div class="dtb-sub" id="dtb-hourly" style="color:var(--uber);font-weight:700;font-size:13px">時給 --</div>
       </div>
     </div>
+    <!-- 走行距離・1km単価・カロリーバー -->
+    <div id="dtb-dist" style="display:none;align-items:center;font-size:13px;font-weight:600;padding:8px 12px;background:var(--bg2);border-radius:var(--radius);margin-bottom:14px;border:0.5px solid var(--border);flex-wrap:wrap;gap:4px"></div>
 
     <!-- 先月同日比較 -->
     <div class="lastmonth-bar" id="lastmonth-bar" style="display:none">
@@ -810,6 +812,7 @@ function updateDailyTotal(){
   const dc=+document.getElementById('demae-c').value||0;
   const rs=+document.getElementById('rocket-s').value||0;
   const rc=+document.getElementById('rocket-c').value||0;
+  const dist=+document.getElementById('inp-distance').value||0;
   const total=us+ds+rs, count=uc+dc+rc;
   const unit=count>0?Math.round(total/count):0;
   const hrs=calcCurrentHours();
@@ -820,6 +823,23 @@ function updateDailyTotal(){
   document.getElementById('dtb-unit').textContent=count>0?`単価 ¥${unit.toLocaleString()}`:'単価 --';
   document.getElementById('dtb-hours').textContent=hrs>0?fmtHours(hrs):'--';
   document.getElementById('dtb-hourly').textContent=hrs>0&&total>0?`時給 ¥${Math.round(total/hrs).toLocaleString()}`:'時給 --';
+  // 走行距離・1km単価・消費カロリー
+  const distEl=document.getElementById('dtb-dist');
+  if(distEl){
+    if(dist>0){
+      const perKm=total>0?Math.round(total/dist):0;
+      const estHrs=hrs>0?hrs:dist/15;
+      const kcal=Math.round(6.0*80*estHrs);
+      distEl.innerHTML=`
+        <span style="margin-right:10px">🚴 ${dist}km</span>
+        ${perKm>0?`<span style="margin-right:10px;color:var(--uber)">¥${perKm}/km</span>`:''}
+        <span style="color:#FF6B00">🔥 ${kcal}kcal</span>
+      `;
+      distEl.style.display='flex';
+    } else {
+      distEl.style.display='none';
+    }
+  }
   updateLastMonthBar(total);
 }
 
@@ -1091,7 +1111,28 @@ function renderSummary(){
   const passed=today2.toISOString().slice(0,7)===month?today2.getDate():totalDays;
   const dailyAvg=curS/(passed||1);
 
-  // ── ペース比較（今月○日時点 vs 先月同日時点）──
+  // ── 走行距離・1km単価・消費カロリー ──
+  const monthDist = f.reduce((s,r)=>s+(r.distance||0), 0);
+  const perKm     = monthDist>0 ? Math.round(curS/monthDist) : 0;
+  // 消費カロリー：自転車中程度 METs=6.0, 体重80kg
+  // 時間が記録されていればそこから、なければ距離÷平均15km/hで推計
+  const METS=6.0, WEIGHT=80, AVG_SPEED=15;
+  const monthHours = f.reduce((s,r)=>{
+    const h=hoursOf(r);
+    if(h>0) return s+h;
+    const dist=r.distance||0;
+    return s+(dist>0?dist/AVG_SPEED:0);
+  },0);
+  const monthKcal = Math.round(METS * WEIGHT * monthHours);
+  // 年間
+  const yearDist  = yf.reduce((s,r)=>s+(r.distance||0), 0);
+  const yearHours2= yf.reduce((s,r)=>{
+    const h=hoursOf(r);
+    if(h>0) return s+h;
+    const dist=r.distance||0;
+    return s+(dist>0?dist/AVG_SPEED:0);
+  },0);
+  const yearKcal  = Math.round(METS * WEIGHT * yearHours2);
   const todayDay = today2.toISOString().slice(0,7)===month ? today2.getDate() : totalDays;
   // 今月の todayDay 日まで（1〜todayDay）の売上合計
   const curPace = f.filter(r=>+r.date.slice(8)<=todayDay).reduce((s,r)=>s+totalOf(r),0);
@@ -1248,7 +1289,11 @@ function renderSummary(){
       <div class="stat-card"><div class="slabel">稼働日平均件数</div><div class="sval">${avgActCount}件</div><div class="sdiff neu">単価¥${avgUnit.toLocaleString()}</div></div>
       ${avgHourlyAll>0?`<div class="stat-card"><div class="slabel">平均時給（6/9〜）</div><div class="sval up">¥${avgHourlyAll.toLocaleString()}</div><div class="sdiff neu">計${hoursAllBase.toFixed(1)}h稼働</div></div>`:''}
       <div class="stat-card"><div class="slabel">連続稼働</div><div class="sval">${streak}日</div><div class="sdiff neu">現在の連続記録</div></div>
-      ${(()=>{const dist=f.reduce((s,r)=>s+(r.distance||0),0);return dist>0?`<div class="stat-card"><div class="slabel">今月の走行距離</div><div class="sval">${dist.toFixed(1)}km</div><div class="sdiff neu">1日平均${active>0?(dist/active).toFixed(1):0}km</div></div>`:''})()}
+      ${monthDist>0?`
+        <div class="stat-card"><div class="slabel">今月の走行距離</div><div class="sval">${monthDist.toFixed(1)}km</div><div class="sdiff neu">1日平均${active>0?(monthDist/active).toFixed(1):0}km</div></div>
+        <div class="stat-card"><div class="slabel">1kmあたり報酬</div><div class="sval up">¥${perKm.toLocaleString()}</div><div class="sdiff neu">${monthDist.toFixed(0)}km走行</div></div>
+        <div class="stat-card"><div class="slabel">🔥 消費カロリー</div><div class="sval">${monthKcal.toLocaleString()}</div><div class="sdiff neu">kcal（推計）</div></div>
+      `:''}
     </div>
     <div class="year-banner"><div><div class="yl">${y}年 累計売上</div><div class="yv">¥${yearS.toLocaleString()}</div></div><div style="text-align:right"><div class="yl">累計件数</div><div style="font-size:16px;font-weight:600">${yearC}件</div></div></div>
     <div class="section-title">プラットフォーム別</div>${platRows}
@@ -1431,7 +1476,11 @@ function renderYear(){
       <div class="stat-card"><div class="slabel">稼働日数</div><div class="sval">${activeYDays}日</div></div>
       ${yearHW?`<div class="stat-card"><div class="slabel">年間平均時給</div><div class="sval up">¥${yearHW.toLocaleString()}</div><div class="sdiff neu">計${yearH.toFixed(0)}h稼働</div></div>`:''}
       <div class="stat-card"><div class="slabel">1日平均売上</div><div class="sval">¥${activeYDays?Math.round(yearS/activeYDays).toLocaleString():0}</div></div>
-      ${(()=>{const dist=yf.reduce((s,r)=>s+(r.distance||0),0);return dist>0?`<div class="stat-card"><div class="slabel">年間走行距離</div><div class="sval">${dist.toFixed(0)}km</div><div class="sdiff neu">1日平均${activeYDays>0?(dist/activeYDays).toFixed(1):0}km</div></div>`:''})()}
+      ${yearDist>0?`
+        <div class="stat-card"><div class="slabel">年間走行距離</div><div class="sval">${yearDist.toFixed(0)}km</div><div class="sdiff neu">1日平均${activeYDays>0?(yearDist/activeYDays).toFixed(1):0}km</div></div>
+        <div class="stat-card"><div class="slabel">1kmあたり報酬</div><div class="sval up">¥${yearDist>0?Math.round(yearS/yearDist).toLocaleString():0}</div><div class="sdiff neu">年間${yearDist.toFixed(0)}km走行</div></div>
+        <div class="stat-card"><div class="slabel">🔥 年間消費カロリー</div><div class="sval">${yearKcal.toLocaleString()}</div><div class="sdiff neu">kcal（推計）</div></div>
+      `:''}
     </div>
     <div class="section-title">月別売上</div>
     <div style="position:relative;width:100%;height:160px;margin-bottom:12px"><canvas id="chart-year"></canvas></div>
@@ -2052,6 +2101,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     document.getElementById(id).addEventListener('input',updateDailyTotal);
     document.getElementById(id).addEventListener('change',scheduleAutoSave);
   });
+  document.getElementById('inp-distance').addEventListener('input',updateDailyTotal);
+  document.getElementById('inp-distance').addEventListener('change',scheduleAutoSave);
   // 天候・メモが変わったら自動保存
   document.getElementById('inp-weather').addEventListener('change',scheduleAutoSave);
   document.getElementById('inp-note').addEventListener('change',scheduleAutoSave);
