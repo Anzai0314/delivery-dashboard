@@ -1116,10 +1116,19 @@ function renderSummary(){
   const passed=today2.toISOString().slice(0,7)===month?today2.getDate():totalDays;
   const dailyAvg=curS/(passed||1);
 
-  // ── 走行距離・1km単価・消費カロリー（入力時に保存したkcalを単純合算）──
+  // ── 走行距離・1km単価・消費カロリー ──
+  // kcalフィールドが保存されていればそれを使用、なければ距離から推計（後方互換）
+  const METS=6.0, WEIGHT=80, AVG_SPEED=15;
   const monthDist = f.reduce((s,r)=>s+(r.distance||0), 0);
   const perKm     = monthDist>0 ? Math.round(curS/monthDist) : 0;
-  const monthKcal = f.reduce((s,r)=>s+(r.kcal||0), 0);
+  const monthKcal = f.reduce((s,r)=>{
+    if(r.kcal) return s+r.kcal;
+    const dist=r.distance||0;
+    if(dist<=0) return s;
+    const h=hoursOf(r);
+    const estHrs = h>0?h:dist/AVG_SPEED;
+    return s+Math.round(METS*WEIGHT*estHrs);
+  }, 0);
   const todayDay = today2.toISOString().slice(0,7)===month ? today2.getDate() : totalDays;
   // 今月の todayDay 日まで（1〜todayDay）の売上合計
   const curPace = f.filter(r=>+r.date.slice(8)<=todayDay).reduce((s,r)=>s+totalOf(r),0);
@@ -1440,9 +1449,18 @@ function renderYear(){
   const prevYS=records.filter(r=>r.date.startsWith(String(Number(year)-1))).reduce((s,r)=>s+totalOf(r),0);
   const[y]=year.split('').map(Number);
 
-  // ── 走行距離・1km単価・消費カロリー（年間・単純合算） ──
+  // ── 走行距離・1km単価・消費カロリー（年間） ──
+  // kcalフィールドが保存されていればそれを使用、なければ距離から推計（後方互換）
+  const METS=6.0, WEIGHT=80, AVG_SPEED=15;
   const yearDist = yf.reduce((s,r)=>s+(r.distance||0), 0);
-  const yearKcal = yf.reduce((s,r)=>s+(r.kcal||0), 0);
+  const yearKcal = yf.reduce((s,r)=>{
+    if(r.kcal) return s+r.kcal;
+    const dist=r.distance||0;
+    if(dist<=0) return s;
+    const h=hoursOf(r);
+    const estHrs = h>0?h:dist/AVG_SPEED;
+    return s+Math.round(METS*WEIGHT*estHrs);
+  }, 0);
 
   const months=Array.from({length:12},(_,i)=>{
     const mo=`${year}-${String(i+1).padStart(2,'0')}`;
