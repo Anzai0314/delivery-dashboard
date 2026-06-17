@@ -44,8 +44,6 @@ body{display:flex;flex-direction:column}
 .forecast-day .fd-date{font-size:10px;color:var(--text2);margin-bottom:3px}
 .forecast-day .fd-icon{font-size:20px;margin-bottom:3px}
 .forecast-day .fd-temp{font-size:10px;color:var(--text2)}
-.forecast-day .fd-expect{font-size:10px;font-weight:600;margin-top:3px}
-.fd-expect.high{color:var(--uber)}.fd-expect.mid{color:#BA7517}.fd-expect.low{color:var(--text2)}
 
 /* 出発・帰宅ボタン */
 .session-block{border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:12px;margin-bottom:10px;background:var(--bg2)}
@@ -247,14 +245,7 @@ body{display:flex;flex-direction:column}
 .tax-note.warn{border-left-color:#BA7517;color:#BA7517}
 .tax-note.good{border-left-color:var(--uber);color:var(--text2)}
 /* キャラクターページ */
-.miru-stage{display:flex;flex-direction:column;align-items:center;padding:20px 0 10px}
-.miru-svg-wrap{position:relative;width:160px;height:160px;margin-bottom:16px}
-.miru-bubble{background:var(--bg2);border:0.5px solid var(--border);border-radius:16px 16px 16px 4px;padding:14px 16px;margin:0 8px 16px;font-size:14px;line-height:1.7;position:relative;min-height:60px;text-align:center}
-.miru-bubble::before{content:'';position:absolute;left:20px;bottom:-10px;border:5px solid transparent;border-top-color:var(--border)}
-.miru-bubble::after{content:'';position:absolute;left:21px;bottom:-8px;border:4px solid transparent;border-top-color:var(--bg2)}
-.miru-status{font-size:12px;font-weight:700;padding:4px 14px;border-radius:20px;margin-bottom:10px;display:inline-block}
-.miru-stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;margin-top:8px}
-.miru-tap-hint{font-size:11px;color:var(--text3);margin-top:8px}
+/* キャラクターページ用CSSは削除済み */
 /* ニュース用スタイルは削除済み */
 .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1}
@@ -272,7 +263,7 @@ body{display:flex;flex-direction:column}
   <!-- ① 入力ページ -->
   <div id="page-entry" class="page active">
     <div class="weather-forecast">
-      <div class="forecast-title"><i class="ti ti-map-pin"></i>仙台市 7日間の天気予報と売上期待値</div>
+      <div class="forecast-title"><i class="ti ti-map-pin"></i>仙台市 7日間の天気予報</div>
       <div class="forecast-days" id="forecast-days"><div style="font-size:12px;color:var(--text2);padding:8px 0">天気予報を取得中...</div></div>
     </div>
     <div class="date-weather-row">
@@ -423,13 +414,6 @@ body{display:flex;flex-direction:column}
     <div id="tax-content"></div>
   </div>
 
-  <!-- ⑥ キャラクターページ -->
-  <div id="page-badge" class="page">
-    <div style="font-size:15px;font-weight:600;margin-bottom:4px">ミルからのひとこと</div>
-    <div style="font-size:11px;color:var(--text2);margin-bottom:16px">今月の売上に応じてミルの表情が変わるよ</div>
-    <div id="badge-content"></div>
-  </div>
-
 </div>
 
 </div>
@@ -441,7 +425,6 @@ body{display:flex;flex-direction:column}
   <button class="nav-item" id="nav-cal"><i class="ti ti-calendar"></i>暦</button>
   <button class="nav-item" id="nav-year"><i class="ti ti-calendar-stats"></i>年間</button>
   <button class="nav-item" id="nav-tax"><i class="ti ti-receipt-tax"></i>申告</button>
-  <button class="nav-item" id="nav-badge"><i class="ti ti-mood-smile"></i>ミル</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -554,115 +537,20 @@ async function fetchForecast(){
     document.getElementById('forecast-days').innerHTML='<div style="font-size:12px;color:var(--text2);padding:4px 0">取得失敗</div>';
   }
 }
-// ── 売上予測エンジン（2026年1月以降のデータ基準）──
+// ── 基準日定義（曜日別平均・時給などで使用） ──
 const BASE_DATE = '2026-01-01';
 const HOURLY_BASE = '2026-06-09';
 
-function calcPrediction(targetDate){
-  // 2026年1月以降の稼働日データのみ使用
-  const base = records.filter(r => r.date >= BASE_DATE && totalOf(r) > 0);
-  if(base.length < 3) return null; // データ不足
-
-  const dow = new Date(targetDate + 'T00:00:00').getDay();
-  const wkey = (() => {
-    // targetDateが今日なら入力中の天気、予報日なら予報から
-    const today = todayStr();
-    if(targetDate === today){
-      const el = document.getElementById('inp-weather');
-      return el ? el.value : 'sunny';
-    }
-    return null; // 呼び出し元で渡す
-  })();
-
-  return calcPredictionWith(base, dow, wkey);
-}
-
-function calcPredictionWith(base, dow, wkey){
-  if(base.length < 3) return null;
-
-  // ① 全体の平均単価・件数
-  const totalSales = base.reduce((s,r) => s+totalOf(r), 0);
-  const totalCount = base.reduce((s,r) => s+countOf(r), 0);
-  const avgUnit    = totalCount > 0 ? totalSales / totalCount : 0;
-  const avgCount   = totalCount / base.length;
-  const baseAvg    = totalSales / base.length;
-
-  // ② 曜日係数（その曜日の平均 / 全体平均）
-  const dowData = base.filter(r => new Date(r.date+'T00:00:00').getDay() === dow);
-  const dowAvg  = dowData.length > 0
-    ? dowData.reduce((s,r) => s+totalOf(r), 0) / dowData.length
-    : baseAvg;
-  const dowRatio = baseAvg > 0 ? dowAvg / baseAvg : 1;
-
-  // ③ 天気係数（その天気の平均 / 全体平均）
-  let wRatio = 1;
-  if(wkey){
-    const wData = base.filter(r => (r.weather||'sunny') === wkey);
-    if(wData.length >= 2){
-      const wAvg = wData.reduce((s,r) => s+totalOf(r), 0) / wData.length;
-      wRatio = baseAvg > 0 ? wAvg / baseAvg : 1;
-    } else {
-      // データ不足時は固定比率
-      const fallback = {sunny:0.92, cloudy:1.0, rainy:1.18, 'heavy-rain':1.32, snowy:1.08};
-      wRatio = fallback[wkey] || 1;
-    }
-  }
-
-  // ④ 直近トレンド（直近2週間 vs 全体）
-  const twoWeeksAgo = new Date(); twoWeeksAgo.setDate(twoWeeksAgo.getDate()-14);
-  const twoWeeksStr = twoWeeksAgo.toISOString().slice(0,10);
-  const recent = base.filter(r => r.date >= twoWeeksStr);
-  let trendRatio = 1;
-  if(recent.length >= 3){
-    const recentAvg = recent.reduce((s,r) => s+totalOf(r), 0) / recent.length;
-    trendRatio = baseAvg > 0 ? (recentAvg / baseAvg * 0.3 + 0.7) : 1; // 30%だけトレンドを反映
-  }
-
-  // ⑤ 予測 = 基準平均 × 曜日係数 × 天気係数 × トレンド係数
-  const predicted = Math.round(baseAvg * dowRatio * wRatio * trendRatio / 100) * 100;
-
-  return {
-    predicted,
-    baseAvg: Math.round(baseAvg),
-    dowAvg:  Math.round(dowAvg),
-    dowRatio: Math.round(dowRatio * 100),
-    wRatio:  Math.round(wRatio * 100),
-    baseDays: base.length,
-    avgUnit:  Math.round(avgUnit),
-    avgCount: Math.round(avgCount * 10) / 10,
-  };
-}
-
-function calcExpected(wkey){
-  // 天気予報バナー用（簡易版）
-  const base = records.filter(r => r.date >= BASE_DATE && totalOf(r) > 0);
-  if(base.length < 3){
-    // データ不足時は旧来の比率方式
-    const all = records.filter(r => totalOf(r) > 0);
-    if(!all.length) return null;
-    const avg = Math.round(all.reduce((s,r) => s+totalOf(r), 0) / all.length);
-    const ratio = {sunny:0.92, cloudy:1.0, rainy:1.18, 'heavy-rain':1.32, snowy:1.08};
-    return Math.round(avg * (ratio[wkey]||1));
-  }
-  const result = calcPredictionWith(base, null, wkey);
-  return result ? result.predicted : null;
-}
 function renderForecast(daily){
   const today=todayStr();
   document.getElementById('forecast-days').innerHTML=daily.time.map((date,i)=>{
     const wkey=WMO[daily.weather_code[i]]||'cloudy';
     const dow=new Date(date+'T00:00:00').getDay();
-    const base2026=records.filter(r=>r.date>=BASE_DATE&&totalOf(r)>0);
-    const pred=calcPredictionWith(base2026, dow, wkey);
-    const exp=pred?pred.predicted:calcExpected(wkey);
-    const expStr=exp?`¥${exp>=10000?(exp/10000).toFixed(1)+'万':exp.toLocaleString()}`:'--';
-    const expCls=!exp?'low':exp>=15000?'high':exp>=10000?'mid':'low';
     const dowLabel=DAYS[dow];
     return `<div class="forecast-day${date===today?' today':''}">
       <div class="fd-date">${date.slice(5).replace('-','/')}(${dowLabel})</div>
       <div class="fd-icon">${wmapS[wkey]}</div>
       <div class="fd-temp">${Math.round(daily.temperature_2m_min[i])}°/${Math.round(daily.temperature_2m_max[i])}°</div>
-      <div class="fd-expect ${expCls}">${expStr}</div>
     </div>`;
   }).join('');
 }
@@ -930,12 +818,11 @@ function updateViews(){
   if(document.getElementById('page-year').classList.contains('active')) renderYear();
   if(document.getElementById('page-week').classList.contains('active')) renderWeek();
   if(document.getElementById('page-tax').classList.contains('active')) renderTax();
-  if(document.getElementById('page-badge').classList.contains('active')) renderBadges();
 }
 
 // ── ページ切替 ────────────────────────────────
 function showPage(p){
-  ['entry','summary','cal','year','week','tax','badge'].forEach(n=>{
+  ['entry','summary','cal','year','week','tax'].forEach(n=>{
     document.getElementById('page-'+n).classList.toggle('active',n===p);
     const nav=document.getElementById('nav-'+n);
     if(nav) nav.classList.toggle('active',n===p);
@@ -945,7 +832,6 @@ function showPage(p){
   if(p==='year')    renderYear();
   if(p==='week')    renderWeek();
   if(p==='tax')     renderTax();
-  if(p==='badge')   renderBadges();
 }
 
 // ── 前日・翌日 ────────────────────────────────
@@ -1194,48 +1080,8 @@ function renderSummary(){
   }).join('');
 
   const labels=f.map(r=>r.date.slice(8)+'日');
-  // ── 今日の予測計算 ──
-  const todayRec = records.find(r => r.date === todayStr());
-  const todayDow = new Date(todayStr()+'T00:00:00').getDay();
-  const todayWeather = todayRec ? (todayRec.weather||'sunny') : 'sunny';
-  const base2026 = records.filter(r => r.date >= BASE_DATE && totalOf(r) > 0);
-  const todayPred = calcPredictionWith(base2026, todayDow, todayWeather);
-  const todayActual = todayRec ? totalOf(todayRec) : null;
 
   document.getElementById('summary-content').innerHTML=`
-    ${todayPred ? `
-    <div class="section-title">今日の売上予測（${todayStr().slice(5).replace('-','/')} ${DAYS[todayDow]}曜・${wmap[todayWeather]}）</div>
-    <div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;background:var(--bg2)">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div>
-          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">予測売上</div>
-          <div style="font-size:28px;font-weight:700;color:#BA7517">¥${todayPred.predicted.toLocaleString()}</div>
-        </div>
-        <div style="text-align:right">
-          ${todayActual !== null ? `
-          <div style="font-size:11px;color:var(--text2);margin-bottom:3px">実績</div>
-          <div style="font-size:20px;font-weight:700;color:${todayActual>=todayPred.predicted?'var(--uber)':'var(--text)'}">¥${todayActual.toLocaleString()}</div>
-          <div style="font-size:11px;margin-top:2px;color:${todayActual>=todayPred.predicted?'var(--up)':'var(--down)'}">
-            ${todayActual>=todayPred.predicted?'▲':'▼'}¥${Math.abs(todayActual-todayPred.predicted).toLocaleString()}
-          </div>` : '<div style="font-size:11px;color:var(--text2)">まだ実績なし</div>'}
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-        <div style="background:var(--bg);border-radius:var(--radius);padding:7px;text-align:center">
-          <div style="font-size:10px;color:var(--text2);margin-bottom:2px">曜日係数</div>
-          <div style="font-size:13px;font-weight:700">${todayPred.dowRatio}%</div>
-        </div>
-        <div style="background:var(--bg);border-radius:var(--radius);padding:7px;text-align:center">
-          <div style="font-size:10px;color:var(--text2);margin-bottom:2px">天気係数</div>
-          <div style="font-size:13px;font-weight:700">${todayPred.wRatio}%</div>
-        </div>
-        <div style="background:var(--bg);border-radius:var(--radius);padding:7px;text-align:center">
-          <div style="font-size:10px;color:var(--text2);margin-bottom:2px">予測件数</div>
-          <div style="font-size:13px;font-weight:700">${todayPred.avgCount}件</div>
-        </div>
-      </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:8px">※ 2026年1月以降の${todayPred.baseDays}日分のデータを基準に算出</div>
-    </div>` : ''}
     <div class="section-title">ペース比較（先月同日まで）</div>
     <div style="border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;background:var(--bg2)">
       <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:10px">
@@ -1630,216 +1476,6 @@ function renderWeek(){
   }));
 }
 
-// ── バッジ定義・描画 ──────────────────────────
-// ── ミルキャラクターページ ────────────────────
-function renderBadges(){
-  // 今月データ
-  const month = getMonthStr();
-  const f = records.filter(r => r.date.startsWith(month));
-  const curS = f.reduce((s,r) => s+totalOf(r), 0);
-  const goalAmt = goals[month]||0;
-  const goalPct = goalAmt > 0 ? Math.round(curS/goalAmt*100) : null;
-  const active = f.filter(r => totalOf(r)>0).length;
-  const [y,m] = month.split('-').map(Number);
-  const prevM = m===1?`${y-1}-12`:`${y}-${String(m-1).padStart(2,'0')}`;
-  const prevS = records.filter(r=>r.date.startsWith(prevM)).reduce((s,r)=>s+totalOf(r),0);
-  const prevDiff = prevS > 0 ? Math.round((curS-prevS)/prevS*100) : null;
-  const today2 = new Date();
-  const passed = today2.toISOString().slice(0,7)===month ? today2.getDate() : new Date(y,m,0).getDate();
-  const todayDay = passed;
-  const dailyAvg = passed > 0 ? Math.round(curS/passed) : 0;
-  // 連続稼働
-  let streak=0;
-  for(let i=0;;i++){
-    const d=new Date(); d.setDate(d.getDate()-i);
-    const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    if(records.find(r=>r.date===ds&&totalOf(r)>0)) streak++; else break;
-  }
-
-  // ── 表情・台詞パターン判定 ──
-  // mood: 'excited'(大喜び) 'happy'(笑顔) 'normal'(普通) 'worried'(心配) 'sad'(落ち込み) 'sleeping'(暇)
-  let mood, statusLabel, statusColor, lines;
-
-  // ── 表情・台詞判定（バランスよく全パターン出るよう設計）──
-  // 今日の実績
-  const todayRec2 = records.find(r => r.date === todayStr());
-  const todayS = todayRec2 ? totalOf(todayRec2) : 0;
-  // 月初からの日数経過率
-  const monthProgress = passed / new Date(y, m, 0).getDate();
-  // ランダム要素（タップするたびに変わる）
-  const rand = Math.random();
-
-  // 先月同日ペース比較（月全体の比較ではなく同日時点で比べる）
-  const curPace2  = f.filter(r => +r.date.slice(8) <= todayDay).reduce((s,r) => s+totalOf(r), 0);
-  const prevPace2 = records.filter(r => r.date.startsWith(prevM) && +r.date.slice(8) <= todayDay).reduce((s,r) => s+totalOf(r), 0);
-  const paceDiff2 = prevPace2 > 0 ? Math.round((curPace2 - prevPace2) / prevPace2 * 100) : null;
-
-  // 判定の優先順位を整理して全表情が出やすいよう分散
-  const patterns = [];
-
-  // 🎉 照れ（excited）: 良いこと全般
-  if(goalPct !== null && goalPct >= 100)
-    patterns.push({mood:'excited', label:'🎉 目標達成！！', color:'#06C167', lines:[
-      `目標${goalPct}%達成！！\n¥${curS.toLocaleString()}、最高すぎる！🎊`,
-      `やったー！目標クリア！\n今月も絶好調だね！🔥`,
-      `¥${curS.toLocaleString()}稼いだじゃん！\n本当にすごいよ！✨`,
-    ]});
-  if(paceDiff2 !== null && paceDiff2 >= 15)
-    patterns.push({mood:'excited', label:'🔥 先月より爆上がり！', color:'#FF6B00', lines:[
-      `先月同日より${paceDiff2}%アップ！\n絶好調だね、この調子！🚀`,
-      `同じ時期と比べて${paceDiff2}%も伸びてる！\nすごすぎ！！🔥`,
-      `ペースが爆上がり中！\n¥${curPace2.toLocaleString()}、かっこいい！✨`,
-    ]});
-  if(streak >= 7)
-    patterns.push({mood:'excited', label:`🔥 ${streak}日連続稼働！`, color:'#FF6B00', lines:[
-      `${streak}日連続稼働！！\nその継続力、本物だよ！🔥`,
-      `${streak}日も続けてるなんて\nすごすぎる！！✨`,
-    ]});
-  if(todayS >= 20000)
-    patterns.push({mood:'excited', label:'⭐ 今日は大当たり！', color:'#BA7517', lines:[
-      `今日¥${todayS.toLocaleString()}！\n大当たりの日だね！🌟`,
-      `今日は${todayS >= 30000 ? '3万超え' : '2万超え'}！！\nやったね！🎉`,
-    ]});
-
-  // 😊 笑顔（happy）: 順調・いいペース
-  if(goalPct !== null && goalPct >= 60 && goalPct < 100)
-    patterns.push({mood:'happy', label:'😊 いい感じ！', color:'#06C167', lines:[
-      `目標${goalPct}%！\nあと少しで達成だよ！💪`,
-      `¥${(goalAmt - curS).toLocaleString()}で目標達成！\nもう一息だよ！🌟`,
-      `いいペースで来てるよ！\nこの調子で頑張ろ！😊`,
-    ]});
-  if(curS >= 100000)
-    patterns.push({mood:'happy', label:'💴 10万突破！', color:'#06C167', lines:[
-      `10万円突破！\n¥${curS.toLocaleString()}、すごいよ！🎊`,
-      `${active}日稼働で¥${curS.toLocaleString()}！\nかっこいい！✨`,
-    ]});
-  if(paceDiff2 !== null && paceDiff2 >= 3 && paceDiff2 < 15)
-    patterns.push({mood:'happy', label:'📈 先月より好調！', color:'#06C167', lines:[
-      `先月同日より${paceDiff2}%アップ中！\n調子いいじゃん！😊`,
-      `同じ時期と比べてじわじわ上がってるよ！\n¥${curPace2.toLocaleString()}、いい感じ！`,
-    ]});
-  if(dailyAvg >= 10000 && active >= 5)
-    patterns.push({mood:'happy', label:'😊 日平均いいね！', color:'#4A90D9', lines:[
-      `日平均¥${dailyAvg.toLocaleString()}！\nコンスタントに稼いでるね！`,
-      `${active}日間コツコツ積み上げ中！\nすごいよ！😊`,
-    ]});
-
-  // 😌 安心（sleeping）: 安定・お疲れ
-  if(active >= 10)
-    patterns.push({mood:'sleeping', label:'😌 お疲れ様！', color:'#4A90D9', lines:[
-      `${active}日も稼働したんだね！\nゆっくり休んでね！😊`,
-      `¥${curS.toLocaleString()}！\n${active}日間お疲れ様！✨`,
-      `コツコツ続けてるの\nちゃんと見てるよ！🌟`,
-    ]});
-  if(monthProgress < 0.3 && curS > 0)
-    patterns.push({mood:'sleeping', label:'😌 好スタート！', color:'#4A90D9', lines:[
-      `月初から¥${curS.toLocaleString()}！\n好スタートだよ！✨`,
-      `まだ月初なのに\nもうこんなに稼いでるじゃん！`,
-    ]});
-  if(paceDiff2 !== null && paceDiff2 >= -3 && paceDiff2 < 3)
-    patterns.push({mood:'sleeping', label:'😌 先月並みのペース', color:'#4A90D9', lines:[
-      `先月とほぼ同じペース！\n安定してていいね！😊`,
-      `同じ時期と比べて同水準！\n着実に積み上げてるよ！`,
-    ]});
-
-  // 😟 もやもや（sad）: ペースが落ちているとき
-  if(paceDiff2 !== null && paceDiff2 <= -15)
-    patterns.push({mood:'sad', label:'😟 先月より少し遅れ気味…', color:'#E91E63', lines:[
-      `先月同日より${Math.abs(paceDiff2)}%遅れてるけど\nまだ挽回できるよ！💨`,
-      `同じ時期と比べてちょっと少ないね\nここから上げていこ！🌟`,
-      `遅れてるの気にしすぎないで！\n一緒に追い上げよ！💪`,
-    ]});
-  if(goalPct !== null && goalPct < 30 && monthProgress > 0.5)
-    patterns.push({mood:'sad', label:'😟 ちょっと遅れてる…', color:'#E91E63', lines:[
-      `目標まで少し遅れてるけど\nまだ間に合うよ！頑張ろ！💪`,
-      `もう少しペース上げると\n目標届くかも！一緒に頑張ろ！`,
-    ]});
-
-  // 😤 焦り（worried）: 月末・今日ゼロ
-  if(monthProgress > 0.8 && goalPct !== null && goalPct < 70)
-    patterns.push({mood:'worried', label:'😤 ラストスパート！', color:'#FF6B00', lines:[
-      `月末近い！\n今からでも全然間に合うよ！🔥`,
-      `ラストスパートだ！\n一緒に追い上げよう！💨`,
-      `残り少ないけど\nできることやってみよ！💪`,
-    ]});
-  if(todayS === 0 && active > 0)
-    patterns.push({mood:'worried', label:'🛵 今日はまだ…', color:'#FF6B00', lines:[
-      `今日はまだ出発してないね！\n天気もいいし行ってみよ！🛵`,
-      `今日のデータがまだないよ！\n一稼ぎしてきて！💨`,
-    ]});
-
-  // 😴 通常（normal）: デフォルト・データなし
-  patterns.push({mood:'normal', label:'📊 今月の状況', color:'#9a9a96', lines:[
-    curS === 0 ? 'まだデータがないよ〜\n今日も出発してみよ！🛵' : `¥${curS.toLocaleString()}！\n今月も一緒に頑張ろ！💪`,
-    curS === 0 ? 'ひまだ〜！\n早く数字を見せてね！📊' : `${active}日稼働中！\nコツコツ積み上げてるね！✨`,
-    `今日も安全運転でね！\n応援してるよ！🛵`,
-  ]});
-
-  // ランダムに選ぶ（パターンが多いほど出やすい）
-  const chosen = patterns[Math.floor(rand * patterns.length)];
-  mood = chosen.mood;
-  statusLabel = chosen.label;
-  statusColor = chosen.color;
-  lines = chosen.lines;
-
-  const text = lines[Math.floor(Math.random()*lines.length)];
-
-  // ── スプライトシート設定 ──
-  // 画像URL（raw）
-  const SPRITE_URL = 'https://raw.githubusercontent.com/Anzai0314/delivery-dashboard/main/fox_6ptn.png';
-  // 1コマ 500×500px、3列2行
-  const SPRITE_MAP = {
-    normal:   {col:0, row:0},
-    happy:    {col:1, row:0},
-    worried:  {col:2, row:0},
-    sad:      {col:0, row:1},
-    excited:  {col:1, row:1},
-    sleeping: {col:2, row:1},
-  };
-  const CELL = 500;
-  const DISP = 160; // 表示サイズ(px)
-  const scale = DISP / CELL;
-  const pos = SPRITE_MAP[mood] || SPRITE_MAP.normal;
-  const bgX = -(pos.col * CELL * scale);
-  const bgY = -(pos.row * CELL * scale);
-  const bgW = 3 * CELL * scale; // 全体幅
-  const bgH = 2 * CELL * scale; // 全体高さ
-
-  const statCards = [
-    {label:'今月売上', val:`¥${curS.toLocaleString()}`},
-    {label:'稼働日数', val:`${active}日`},
-    {label:'前月比', val: prevDiff!==null ? (prevDiff>0?`▲${prevDiff}%`:`▼${Math.abs(prevDiff)}%`) : '--', color: prevDiff===null?'':prevDiff>0?'var(--up)':'var(--down)'},
-    {label:'連続稼働', val:`${streak}日`},
-    goalAmt ? {label:'目標達成率', val:`${goalPct??0}%`, color: goalPct>=100?'var(--up)':'var(--text)'} : null,
-    {label:'日平均', val:`¥${dailyAvg.toLocaleString()}`},
-  ].filter(Boolean);
-
-  document.getElementById('badge-content').innerHTML = `
-    <div class="miru-stage">
-      <span class="miru-status" style="background:${statusColor}22;color:${statusColor};border:0.5px solid ${statusColor}66">${statusLabel}</span>
-      <div class="miru-svg-wrap">
-        <div id="miru-sprite" style="
-          width:${DISP}px;
-          height:${DISP}px;
-          background-image:url('${SPRITE_URL}');
-          background-size:${bgW}px ${bgH}px;
-          background-position:${bgX}px ${bgY}px;
-          background-repeat:no-repeat;
-          cursor:pointer;
-          image-rendering:auto;
-        "></div>
-      </div>
-      <div class="miru-bubble">${text.replace(/\n/g,'<br>')}</div>
-      <div class="miru-tap-hint">タップで台詞を変えるよ</div>
-      <div class="miru-stats-grid">
-        ${statCards.map(c=>`<div class="stat-card"><div class="slabel">${c.label}</div><div class="sval" style="${c.color?'color:'+c.color:''}">${c.val}</div></div>`).join('')}
-      </div>
-    </div>
-  `;
-
-  document.getElementById('miru-sprite').addEventListener('click', ()=>renderBadges());
-  document.querySelector('.miru-bubble').addEventListener('click', ()=>renderBadges());
-}
 
 let taxState = {
   type: 'blue', // 'blue'=青色申告 'white'=白色申告
@@ -2102,7 +1738,6 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('nav-week').addEventListener('click',()=>showPage('week'));
   document.getElementById('nav-year').addEventListener('click',()=>showPage('year'));
   document.getElementById('nav-tax').addEventListener('click',()=>showPage('tax'));
-  document.getElementById('nav-badge').addEventListener('click',()=>showPage('badge'));
   document.getElementById('inp-date').addEventListener('change',e=>loadEntryForDate(e.target.value));
 
   // 数値入力：inputでリアルタイム表示更新、changeで自動保存
