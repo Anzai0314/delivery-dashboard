@@ -1124,15 +1124,6 @@ function renderSummary(){
     return s+(dist>0?dist/AVG_SPEED:0);
   },0);
   const monthKcal = Math.round(METS * WEIGHT * monthHours);
-  // 年間
-  const yearDist  = yf.reduce((s,r)=>s+(r.distance||0), 0);
-  const yearHours2= yf.reduce((s,r)=>{
-    const h=hoursOf(r);
-    if(h>0) return s+h;
-    const dist=r.distance||0;
-    return s+(dist>0?dist/AVG_SPEED:0);
-  },0);
-  const yearKcal  = Math.round(METS * WEIGHT * yearHours2);
   const todayDay = today2.toISOString().slice(0,7)===month ? today2.getDate() : totalDays;
   // 今月の todayDay 日まで（1〜todayDay）の売上合計
   const curPace = f.filter(r=>+r.date.slice(8)<=todayDay).reduce((s,r)=>s+totalOf(r),0);
@@ -1453,6 +1444,18 @@ function renderYear(){
   const activeYDays=yf.filter(r=>totalOf(r)>0).length;
   const prevYS=records.filter(r=>r.date.startsWith(String(Number(year)-1))).reduce((s,r)=>s+totalOf(r),0);
   const[y]=year.split('').map(Number);
+
+  // ── 走行距離・1km単価・消費カロリー（年間） ──
+  const METS=6.0, WEIGHT=80, AVG_SPEED=15;
+  const yearDist = yf.reduce((s,r)=>s+(r.distance||0), 0);
+  const yearHoursForKcal = yf.reduce((s,r)=>{
+    const h=hoursOf(r);
+    if(h>0) return s+h;
+    const dist=r.distance||0;
+    return s+(dist>0?dist/AVG_SPEED:0);
+  },0);
+  const yearKcal = Math.round(METS * WEIGHT * yearHoursForKcal);
+
   const months=Array.from({length:12},(_,i)=>{
     const mo=`${year}-${String(i+1).padStart(2,'0')}`;
     const mf=records.filter(r=>r.date.startsWith(mo));
