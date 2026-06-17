@@ -555,6 +555,7 @@ async function fetchForecast(){
 }
 // ── 売上予測エンジン（2026年1月以降のデータ基準）──
 const BASE_DATE = '2026-01-01';
+const HOURLY_BASE = '2026-06-09';
 
 function calcPrediction(targetDate){
   // 2026年1月以降の稼働日データのみ使用
@@ -1115,9 +1116,9 @@ function renderSummary(){
   const monthDist = f.reduce((s,r)=>s+(r.distance||0), 0);
   const perKm     = monthDist>0 ? Math.round(curS/monthDist) : 0;
   // 消費カロリー：自転車中程度 METs=6.0, 体重80kg
-  // 時間が記録されていればそこから、なければ距離÷平均15km/hで推計
+  // 6月9日（稼働時間計測開始日）以降のデータのみを対象にする
   const METS=6.0, WEIGHT=80, AVG_SPEED=15;
-  const monthHours = f.reduce((s,r)=>{
+  const monthHours = f.filter(r=>r.date>=HOURLY_BASE).reduce((s,r)=>{
     const h=hoursOf(r);
     if(h>0) return s+h;
     const dist=r.distance||0;
@@ -1151,7 +1152,6 @@ function renderSummary(){
   records.filter(r=>r.date>=BASE_DATE&&totalOf(r)>0).forEach(r=>{const dow=new Date(r.date+'T00:00:00').getDay();dowStats[dow].sales+=totalOf(r);dowStats[dow].count+=countOf(r);dowStats[dow].days++;});
   const maxDowSales=Math.max(...dowStats.map(d=>d.days?Math.round(d.sales/d.days):0),1);
   // 平均時給：セッション計測開始日（2026年6月9日）以降のデータを使用
-  const HOURLY_BASE='2026-06-09';
   const hoursAllBase=records.filter(r=>r.date>=HOURLY_BASE).reduce((s,r)=>s+hoursOf(r),0);
   const salesForHourly=records.filter(r=>r.date>=HOURLY_BASE).reduce((s,r)=>s+totalOf(r),0);
   const avgHourlyAll=hoursAllBase>0?Math.round(salesForHourly/hoursAllBase):0;
@@ -1448,7 +1448,7 @@ function renderYear(){
   // ── 走行距離・1km単価・消費カロリー（年間） ──
   const METS=6.0, WEIGHT=80, AVG_SPEED=15;
   const yearDist = yf.reduce((s,r)=>s+(r.distance||0), 0);
-  const yearHoursForKcal = yf.reduce((s,r)=>{
+  const yearHoursForKcal = yf.filter(r=>r.date>=HOURLY_BASE).reduce((s,r)=>{
     const h=hoursOf(r);
     if(h>0) return s+h;
     const dist=r.distance||0;
