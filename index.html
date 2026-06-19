@@ -1131,7 +1131,7 @@ function renderSummary(){
       ${avgHourlyAll>0?`<div class="stat-card"><div class="slabel">平均時給（6/9〜）</div><div class="sval up">¥${avgHourlyAll.toLocaleString()}</div><div class="sdiff neu">計${hoursAllBase.toFixed(1)}h稼働</div></div>`:''}
       <div class="stat-card"><div class="slabel">連続稼働</div><div class="sval">${streak}日</div><div class="sdiff neu">現在の連続記録</div></div>
       ${monthDist>0?`
-        <div class="stat-card"><div class="slabel">今月の走行距離</div><div class="sval">${monthDist.toFixed(1)}km</div><div class="sdiff neu">1日平均${active>0?(monthDist/active).toFixed(1):0}km</div></div>
+        <div class="stat-card"><div class="slabel">今月の走行距離</div><div class="sval">${monthDist.toFixed(1)}km</div><div class="sdiff neu">1日平均${active.length>0?(monthDist/active.length).toFixed(1):0}km</div></div>
         <div class="stat-card"><div class="slabel">1kmあたり報酬</div><div class="sval up">¥${perKm.toLocaleString()}</div><div class="sdiff neu">${monthDist.toFixed(0)}km走行</div></div>
         <div class="stat-card"><div class="slabel">🔥 消費カロリー</div><div class="sval">${monthKcal.toLocaleString()}</div><div class="sdiff neu">kcal（推計）</div></div>
       `:''}
