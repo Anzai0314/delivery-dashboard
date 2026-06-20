@@ -244,6 +244,21 @@ body{display:flex;flex-direction:column}
 .tax-note{font-size:11px;color:var(--text3);line-height:1.6;padding:10px 12px;background:var(--bg2);border-radius:var(--radius);margin-bottom:8px;border-left:3px solid var(--border2)}
 .tax-note.warn{border-left-color:#BA7517;color:#BA7517}
 .tax-note.good{border-left-color:var(--uber);color:var(--text2)}
+/* 食事記録 */
+.food-result-item{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:6px;cursor:pointer;background:var(--bg2)}
+.food-result-item:active{background:var(--bg3)}
+.fri-name{font-size:13px;font-weight:600}
+.fri-kcal{font-size:13px;font-weight:700;color:#FF6B00}
+.fri-unit{font-size:10px;color:var(--text2);margin-top:2px}
+.meal-item{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:0.5px solid var(--border);border-radius:var(--radius);margin-bottom:6px;background:var(--bg2)}
+.mi-info{flex:1}
+.mi-name{font-size:13px;font-weight:600}
+.mi-detail{font-size:11px;color:var(--text2);margin-top:2px}
+.mi-kcal{font-size:14px;font-weight:700;color:#FF6B00;margin-right:8px}
+.mi-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:4px}
+.qty-stepper{display:flex;align-items:center;gap:6px;margin-top:8px}
+.qty-stepper button{width:28px;height:28px;border-radius:50%;border:0.5px solid var(--border2);background:var(--bg);color:var(--text);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center}
+.qty-stepper span{font-size:14px;font-weight:600;min-width:50px;text-align:center}
 /* キャラクターページ */
 /* キャラクターページ用CSSは削除済み */
 /* ニュース用スタイルは削除済み */
@@ -407,14 +422,42 @@ body{display:flex;flex-direction:column}
     <div id="week-content"></div>
   </div>
 
-  <!-- ⑦ 確定申告ページ -->
+  <!-- ⑥ 確定申告ページ -->
   <div id="page-tax" class="page">
     <div style="font-size:15px;font-weight:600;margin-bottom:4px">確定申告シミュレーター</div>
     <div style="font-size:11px;color:var(--text2);margin-bottom:16px">※概算です。正確な申告は税理士にご相談ください</div>
     <div id="tax-content"></div>
   </div>
 
-</div>
+  <!-- ⑦ 食事記録ページ -->
+  <div id="page-meal" class="page">
+    <div class="date-input-wrap" style="margin-bottom:14px">
+      <button class="date-btn" id="btn-meal-prev-day"><i class="ti ti-chevron-left"></i>前日</button>
+      <div class="field"><label>日付</label><input type="date" id="meal-date"></div>
+      <button class="date-btn" id="btn-meal-next-day">翌日<i class="ti ti-chevron-right"></i></button>
+    </div>
+
+    <div class="daily-total-banner" style="margin-bottom:14px">
+      <div>
+        <div class="dtb-label">本日の摂取カロリー</div>
+        <div class="dtb-amount zero" id="meal-total-kcal">0 kcal</div>
+      </div>
+      <div class="dtb-right">
+        <div class="dtb-label">消費カロリー</div>
+        <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px" id="meal-burned-kcal">--</div>
+        <div class="dtb-sub" id="meal-net-kcal" style="font-weight:700">収支 --</div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input type="text" id="food-search" placeholder="食品名で検索（例：白米、唐揚げ）" autocomplete="off"
+        style="flex:1;padding:10px 12px;border-radius:var(--radius);border:0.5px solid var(--border2);background:var(--bg);color:var(--text);font-size:14px">
+    </div>
+    <div id="food-search-results" style="margin-bottom:14px"></div>
+
+    <div class="section-title">今日の食事記録</div>
+    <div id="meal-list"></div>
+  </div>
 
 </div>
 
@@ -425,6 +468,7 @@ body{display:flex;flex-direction:column}
   <button class="nav-item" id="nav-cal"><i class="ti ti-calendar"></i>暦</button>
   <button class="nav-item" id="nav-year"><i class="ti ti-calendar-stats"></i>年間</button>
   <button class="nav-item" id="nav-tax"><i class="ti ti-receipt-tax"></i>申告</button>
+  <button class="nav-item" id="nav-meal"><i class="ti ti-soup"></i>食事</button>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -822,7 +866,7 @@ function updateViews(){
 
 // ── ページ切替 ────────────────────────────────
 function showPage(p){
-  ['entry','summary','cal','year','week','tax'].forEach(n=>{
+  ['entry','summary','cal','year','week','tax','meal'].forEach(n=>{
     document.getElementById('page-'+n).classList.toggle('active',n===p);
     const nav=document.getElementById('nav-'+n);
     if(nav) nav.classList.toggle('active',n===p);
@@ -832,6 +876,7 @@ function showPage(p){
   if(p==='year')    renderYear();
   if(p==='week')    renderWeek();
   if(p==='tax')     renderTax();
+  if(p==='meal')    renderMealPage();
 }
 
 // ── 前日・翌日 ────────────────────────────────
@@ -1707,6 +1752,264 @@ function renderTax(){
   });
 }
 
+// ── 食事記録・食品データベース ─────────────────
+// 100g/個あたりのカロリー(kcal)。unit: 'g'=100g基準, 'piece'=1個基準
+const FOOD_DB = [
+  // 主食
+  {name:'白米（茶碗1杯150g）',kcal:252,unit:'piece'},
+  {name:'玄米（茶碗1杯150g）',kcal:248,unit:'piece'},
+  {name:'食パン（1枚6枚切り）',kcal:158,unit:'piece'},
+  {name:'おにぎり（1個）',kcal:180,unit:'piece'},
+  {name:'パスタ（乾麺100g）',kcal:378,unit:'g'},
+  {name:'うどん（1玉）',kcal:240,unit:'piece'},
+  {name:'そば（1玉）',kcal:260,unit:'piece'},
+  {name:'ラーメン（1食・スープ含む）',kcal:470,unit:'piece'},
+  {name:'カップラーメン',kcal:380,unit:'piece'},
+  {name:'もち（1個）',kcal:117,unit:'piece'},
+  // 主菜・肉類
+  {name:'鶏もも肉（皮付き100g）',kcal:200,unit:'g'},
+  {name:'鶏むね肉（皮なし100g）',kcal:108,unit:'g'},
+  {name:'豚バラ肉（100g）',kcal:386,unit:'g'},
+  {name:'豚ロース肉（100g）',kcal:263,unit:'g'},
+  {name:'牛バラ肉（100g）',kcal:371,unit:'g'},
+  {name:'牛もも肉（100g）',kcal:196,unit:'g'},
+  {name:'ひき肉（合挽き100g）',kcal:224,unit:'g'},
+  {name:'ウインナー（1本）',kcal:64,unit:'piece'},
+  {name:'ベーコン（1枚）',kcal:80,unit:'piece'},
+  {name:'卵（1個）',kcal:91,unit:'piece'},
+  {name:'納豆（1パック）',kcal:100,unit:'piece'},
+  {name:'豆腐（1/2丁150g）',kcal:84,unit:'piece'},
+  // 魚介
+  {name:'鮭（1切れ80g）',kcal:178,unit:'piece'},
+  {name:'サバ（1切れ80g）',kcal:264,unit:'piece'},
+  {name:'マグロ刺身（5切れ）',kcal:90,unit:'piece'},
+  {name:'エビ（5尾）',kcal:50,unit:'piece'},
+  // 揚げ物・惣菜
+  {name:'唐揚げ（1個）',kcal:90,unit:'piece'},
+  {name:'天ぷら（エビ1本）',kcal:90,unit:'piece'},
+  {name:'コロッケ（1個）',kcal:170,unit:'piece'},
+  {name:'とんかつ（1枚100g）',kcal:344,unit:'piece'},
+  {name:'餃子（1個）',kcal:50,unit:'piece'},
+  {name:'春巻き（1本）',kcal:115,unit:'piece'},
+  {name:'肉まん（1個）',kcal:240,unit:'piece'},
+  // 弁当・丼
+  {name:'幕の内弁当',kcal:650,unit:'piece'},
+  {name:'唐揚げ弁当',kcal:850,unit:'piece'},
+  {name:'牛丼',kcal:733,unit:'piece'},
+  {name:'カツ丼',kcal:870,unit:'piece'},
+  {name:'親子丼',kcal:670,unit:'piece'},
+  {name:'天丼',kcal:800,unit:'piece'},
+  {name:'カレーライス',kcal:760,unit:'piece'},
+  {name:'チャーハン',kcal:650,unit:'piece'},
+  {name:'お好み焼き',kcal:550,unit:'piece'},
+  {name:'たこ焼き（8個）',kcal:330,unit:'piece'},
+  // ファストフード
+  {name:'ハンバーガー',kcal:280,unit:'piece'},
+  {name:'チーズバーガー',kcal:330,unit:'piece'},
+  {name:'ビッグマック',kcal:525,unit:'piece'},
+  {name:'フライドポテト（M）',kcal:410,unit:'piece'},
+  {name:'チキンナゲット（5個）',kcal:270,unit:'piece'},
+  {name:'フライドチキン（1個）',kcal:220,unit:'piece'},
+  {name:'ピザ（1枚/Mサイズの1/4）',kcal:280,unit:'piece'},
+  {name:'牛丼チェーン牛丼（並）',kcal:733,unit:'piece'},
+  // コンビニ
+  {name:'おにぎり（コンビニ・ツナマヨ）',kcal:200,unit:'piece'},
+  {name:'サンドイッチ（ハム）',kcal:280,unit:'piece'},
+  {name:'パスタサラダ（コンビニ）',kcal:350,unit:'piece'},
+  {name:'からあげクン（5個）',kcal:240,unit:'piece'},
+  {name:'肉まん（コンビニ）',kcal:240,unit:'piece'},
+  {name:'おでん（1パック）',kcal:150,unit:'piece'},
+  // 麺類チェーン
+  {name:'ラーメン（豚骨）',kcal:500,unit:'piece'},
+  {name:'味噌ラーメン',kcal:550,unit:'piece'},
+  {name:'つけ麺',kcal:600,unit:'piece'},
+  {name:'うどん（かけ）',kcal:300,unit:'piece'},
+  {name:'蕎麦（かけ）',kcal:280,unit:'piece'},
+  // サラダ・野菜
+  {name:'グリーンサラダ',kcal:30,unit:'piece'},
+  {name:'ポテトサラダ（小鉢）',kcal:140,unit:'piece'},
+  {name:'味噌汁（1杯）',kcal:40,unit:'piece'},
+  {name:'野菜炒め',kcal:150,unit:'piece'},
+  // 飲み物
+  {name:'コーラ（500ml）',kcal:225,unit:'piece'},
+  {name:'缶コーヒー（甘め）',kcal:80,unit:'piece'},
+  {name:'缶コーヒー（無糖）',kcal:5,unit:'piece'},
+  {name:'スポーツドリンク（500ml）',kcal:100,unit:'piece'},
+  {name:'エナジードリンク',kcal:90,unit:'piece'},
+  {name:'オレンジジュース（200ml）',kcal:90,unit:'piece'},
+  {name:'牛乳（200ml）',kcal:134,unit:'piece'},
+  {name:'豆乳（200ml）',kcal:92,unit:'piece'},
+  {name:'ビール（350ml）',kcal:140,unit:'piece'},
+  {name:'ハイボール（350ml）',kcal:70,unit:'piece'},
+  // 菓子・デザート
+  {name:'おにぎりせんべい（1袋）',kcal:150,unit:'piece'},
+  {name:'ポテトチップス（1袋60g）',kcal:336,unit:'piece'},
+  {name:'チョコレート（板1枚）',kcal:280,unit:'piece'},
+  {name:'プリン',kcal:150,unit:'piece'},
+  {name:'アイスクリーム（カップ）',kcal:180,unit:'piece'},
+  {name:'どら焼き',kcal:230,unit:'piece'},
+  {name:'シュークリーム',kcal:220,unit:'piece'},
+  {name:'クリームパン',kcal:280,unit:'piece'},
+  {name:'メロンパン',kcal:380,unit:'piece'},
+  {name:'バナナ（1本）',kcal:86,unit:'piece'},
+  {name:'りんご（1個）',kcal:138,unit:'piece'},
+  {name:'みかん（1個）',kcal:35,unit:'piece'},
+  {name:'ヨーグルト（1個）',kcal:90,unit:'piece'},
+  {name:'プロテインバー',kcal:200,unit:'piece'},
+  {name:'おにぎり（梅）',kcal:170,unit:'piece'},
+];
+
+let mealDate = todayStr();
+let mealRecords = []; // {date, foodName, kcal, qty, time}[]
+
+function searchFood(query){
+  if(!query || query.length<1) return [];
+  const q = query.toLowerCase();
+  return FOOD_DB.filter(f=>f.name.toLowerCase().includes(q)).slice(0,8);
+}
+
+function renderFoodSearchResults(query){
+  const container = document.getElementById('food-search-results');
+  if(!container) return;
+  if(!query){ container.innerHTML=''; return; }
+  const results = searchFood(query);
+  if(!results.length){
+    container.innerHTML = '<div style="font-size:12px;color:var(--text2);padding:8px">該当する食品がありません</div>';
+    return;
+  }
+  container.innerHTML = results.map(f=>`
+    <div class="food-result-item" data-name="${f.name}" data-kcal="${f.kcal}">
+      <div>
+        <div class="fri-name">${f.name}</div>
+        <div class="fri-unit">${f.unit==='piece'?'1人前あたり':'100gあたり'}</div>
+      </div>
+      <div class="fri-kcal">${f.kcal} kcal</div>
+    </div>
+  `).join('');
+  container.querySelectorAll('.food-result-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      addMealRecord(el.dataset.name, +el.dataset.kcal);
+      document.getElementById('food-search').value='';
+      container.innerHTML='';
+    });
+  });
+}
+
+async function addMealRecord(name, kcal){
+  const rec = {
+    date: mealDate,
+    foodName: name,
+    kcal: kcal,
+    qty: 1,
+    time: nowTime(),
+    id: Date.now().toString(),
+  };
+  mealRecords.push(rec);
+  await saveMealRecords();
+  renderMealList();
+  showToast(`${name} を追加しました`);
+}
+
+async function saveMealRecords(){
+  try{
+    const dayRecords = mealRecords.filter(r=>r.date===mealDate);
+    await setDoc(doc(db,'meal_records',mealDate),{ items: dayRecords });
+  }catch(e){}
+}
+
+async function loadMealRecords(date){
+  try{
+    const snap = await getDoc(doc(db,'meal_records',date));
+    const items = snap.exists() ? (snap.data().items||[]) : [];
+    mealRecords = mealRecords.filter(r=>r.date!==date).concat(items);
+  }catch(e){}
+}
+
+function updateMealQty(id, delta){
+  const rec = mealRecords.find(r=>r.id===id);
+  if(!rec) return;
+  rec.qty = Math.max(1, (rec.qty||1)+delta);
+  saveMealRecords();
+  renderMealList();
+}
+
+async function deleteMealRecord(id){
+  mealRecords = mealRecords.filter(r=>r.id!==id);
+  await saveMealRecords();
+  renderMealList();
+}
+
+function renderMealList(){
+  const dayRecords = mealRecords.filter(r=>r.date===mealDate);
+  const totalKcal = dayRecords.reduce((s,r)=>s+(r.kcal*(r.qty||1)),0);
+
+  document.getElementById('meal-total-kcal').textContent = `${totalKcal.toLocaleString()} kcal`;
+  document.getElementById('meal-total-kcal').className = totalKcal>0?'dtb-amount':'dtb-amount zero';
+
+  // 消費カロリー（その日の配達記録から取得）
+  const rec = records.find(r=>r.date===mealDate);
+  const burnedKcal = rec ? (rec.kcal || 0) : 0;
+  document.getElementById('meal-burned-kcal').textContent = burnedKcal>0 ? `${burnedKcal.toLocaleString()} kcal` : '--';
+  const net = totalKcal - burnedKcal;
+  const netEl = document.getElementById('meal-net-kcal');
+  if(burnedKcal>0){
+    netEl.textContent = `収支 ${net>=0?'+':''}${net.toLocaleString()} kcal`;
+    netEl.style.color = net>0 ? 'var(--down)' : 'var(--uber)';
+  } else {
+    netEl.textContent = '収支 --';
+    netEl.style.color = 'var(--text2)';
+  }
+
+  const listEl = document.getElementById('meal-list');
+  if(!dayRecords.length){
+    listEl.innerHTML = '<div class="empty">まだ記録がありません<br>上の検索欄から食品を探して追加してください</div>';
+    return;
+  }
+  listEl.innerHTML = dayRecords.map(r=>`
+    <div class="meal-item">
+      <div class="mi-info">
+        <div class="mi-name">${r.foodName}</div>
+        <div class="mi-detail">${r.time||''}</div>
+        <div class="qty-stepper">
+          <button data-qty-id="${r.id}" data-delta="-1">−</button>
+          <span>${r.qty||1}人前</span>
+          <button data-qty-id="${r.id}" data-delta="1">+</button>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div class="mi-kcal">${(r.kcal*(r.qty||1)).toLocaleString()} kcal</div>
+        <button class="mi-del" data-del-id="${r.id}"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>
+  `).join('');
+
+  listEl.querySelectorAll('[data-qty-id]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      updateMealQty(e.currentTarget.dataset.qtyId, +e.currentTarget.dataset.delta);
+    });
+  });
+  listEl.querySelectorAll('[data-del-id]').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      deleteMealRecord(e.currentTarget.dataset.delId);
+    });
+  });
+}
+
+async function changeMealDay(offset){
+  const[y,m,d]=mealDate.split('-').map(Number);
+  const nd=new Date(y,m-1,d+offset);
+  mealDate=`${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,'0')}-${String(nd.getDate()).padStart(2,'0')}`;
+  document.getElementById('meal-date').value = mealDate;
+  await loadMealRecords(mealDate);
+  renderMealList();
+}
+
+async function renderMealPage(){
+  document.getElementById('meal-date').value = mealDate;
+  await loadMealRecords(mealDate);
+  renderMealList();
+}
+
 function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
@@ -1738,6 +2041,17 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('nav-week').addEventListener('click',()=>showPage('week'));
   document.getElementById('nav-year').addEventListener('click',()=>showPage('year'));
   document.getElementById('nav-tax').addEventListener('click',()=>showPage('tax'));
+  document.getElementById('nav-meal').addEventListener('click',()=>showPage('meal'));
+  document.getElementById('btn-meal-prev-day').addEventListener('click',()=>changeMealDay(-1));
+  document.getElementById('btn-meal-next-day').addEventListener('click',()=>changeMealDay(1));
+  document.getElementById('meal-date').addEventListener('change', async e=>{
+    mealDate = e.target.value;
+    await loadMealRecords(mealDate);
+    renderMealList();
+  });
+  document.getElementById('food-search').addEventListener('input', e=>{
+    renderFoodSearchResults(e.target.value);
+  });
   document.getElementById('inp-date').addEventListener('change',e=>loadEntryForDate(e.target.value));
 
   // 数値入力：inputでリアルタイム表示更新、changeで自動保存
