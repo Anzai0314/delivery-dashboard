@@ -1173,6 +1173,7 @@ function renderSummary(){
       <div class="stat-card"><div class="slabel">総件数</div><div class="sval">${curC}件</div><div class="sdiff">${diffHtml(curC,prevC,'前月比')}${diffHtml(curC,lyC,'前年比')}</div></div>
       <div class="stat-card"><div class="slabel">稼働日平均売上</div><div class="sval">¥${avgDaySales.toLocaleString()}</div><div class="sdiff neu">${active.length}日稼働</div></div>
       <div class="stat-card"><div class="slabel">稼働日平均件数</div><div class="sval">${avgActCount}件</div><div class="sdiff neu">単価¥${avgUnit.toLocaleString()}</div></div>
+      ${hoursAll>0?`<div class="stat-card"><div class="slabel">今月の合計稼働時間</div><div class="sval">${fmtHours(hoursAll)}</div><div class="sdiff neu">1日平均${active.length>0?fmtHours(hoursAll/active.length):'--'}</div></div>`:''}
       ${avgHourlyAll>0?`<div class="stat-card"><div class="slabel">平均時給（6/9〜）</div><div class="sval up">¥${avgHourlyAll.toLocaleString()}</div><div class="sdiff neu">計${hoursAllBase.toFixed(1)}h稼働</div></div>`:''}
       <div class="stat-card"><div class="slabel">連続稼働</div><div class="sval">${streak}日</div><div class="sdiff neu">現在の連続記録</div></div>
       ${monthDist>0?`
@@ -1374,6 +1375,7 @@ function renderYear(){
       <div class="stat-card stat-card-full"><div class="slabel">${year}年 年間総売上</div><div class="sval" style="font-size:26px">¥${yearS.toLocaleString()}</div><div class="sdiff">${diffHtml(yearS,prevYS,'前年比')}</div></div>
       <div class="stat-card"><div class="slabel">年間総件数</div><div class="sval">${yearC}件</div></div>
       <div class="stat-card"><div class="slabel">稼働日数</div><div class="sval">${activeYDays}日</div></div>
+      ${yearH>0?`<div class="stat-card"><div class="slabel">年間合計稼働時間</div><div class="sval">${fmtHours(yearH)}</div><div class="sdiff neu">1日平均${activeYDays>0?fmtHours(yearH/activeYDays):'--'}</div></div>`:''}
       ${yearHW?`<div class="stat-card"><div class="slabel">年間平均時給</div><div class="sval up">¥${yearHW.toLocaleString()}</div><div class="sdiff neu">計${yearH.toFixed(0)}h稼働</div></div>`:''}
       <div class="stat-card"><div class="slabel">1日平均売上</div><div class="sval">¥${activeYDays?Math.round(yearS/activeYDays).toLocaleString():0}</div></div>
       ${yearDist>0?`
