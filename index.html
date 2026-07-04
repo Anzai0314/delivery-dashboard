@@ -1009,6 +1009,152 @@ function calcTimeSlotHourly(records){
   }).filter(s => s.hrs > 0);
 }
 
+// ── 気づきレポート生成 ────────────────────────
+function generateInsightReport({f, pf, curS, prevS, curC, prevC, active, avgDaySales, dowStats, wStats, month, y, m, records, streak}){
+  const insights = [];
+  const activeLen = active.length;
+
+  // ── A. 面白い事実（曜日・天気の特徴的パターン） ──
+  // 最高・最低曜日
+  const dowAvgs = DAYS.map((d,i)=>({day:d, idx:i, avg: dowStats[i].days ? Math.round(dowStats[i].sales/dowStats[i].days) : 0, days: dowStats[i].days}));
+  const validDow = dowAvgs.filter(d=>d.days>=2);
+  if(validDow.length>=2){
+    const bestDow = validDow.reduce((a,b)=>a.avg>b.avg?a:b);
+    const worstDow = validDow.reduce((a,b)=>a.avg<b.avg?a:b);
+    if(bestDow.avg > 0){
+      const ratio = Math.round((bestDow.avg - worstDow.avg) / worstDow.avg * 100);
+      insights.push({
+        type:'fact', icon:'📅',
+        title:`${bestDow.day}曜日が最も稼ぎやすい`,
+        body:`${bestDow.day}曜日の平均売上は¥${bestDow.avg.toLocaleString()}で、最も低い${worstDow.day}曜日（¥${worstDow.avg.toLocaleString()}）より${ratio}%高いです。`
+      });
+    }
+  }
+
+  // 今月の最高日
+  const topDay = f.filter(r=>totalOf(r)>0).sort((a,b)=>totalOf(b)-totalOf(a))[0];
+  if(topDay){
+    const topDow = DAYS[new Date(topDay.date+'T00:00:00').getDay()];
+    insights.push({
+      type:'fact', icon:'⭐',
+      title:`今月のベストデーは${topDay.date.slice(5).replace('-','/')}（${topDow}曜）`,
+      body:`¥${totalOf(topDay).toLocaleString()}を記録。天候は${wmap[topDay.weather]||''}。`
+    });
+  }
+
+  // 天気の傾向
+  const rainData = Object.entries(wStats).filter(([k])=>k.includes('rain')||k.includes('rainy')||k==='rainy');
+  const sunData = wStats['sunny'];
+  if(sunData && sunData.days>=2){
+    const rainAll = f.filter(r=>(r.weather||'').includes('rain'));
+    const rainAvg = rainAll.length ? Math.round(rainAll.reduce((s,r)=>s+totalOf(r),0)/rainAll.length) : 0;
+    const sunAvg = Math.round(sunData.sales/sunData.days);
+    if(rainAvg > 0 && rainAll.length>=2){
+      const diff = Math.round((rainAvg-sunAvg)/sunAvg*100);
+      if(Math.abs(diff)>=5){
+        insights.push({
+          type:'fact', icon:'🌧️',
+          title:`雨の日は晴れの日より${diff>0?diff+'%高い':Math.abs(diff)+'%低い'}`,
+          body:`雨の日の平均¥${rainAvg.toLocaleString()} vs 晴れの日¥${sunAvg.toLocaleString()}。${diff>0?'雨の日も積極的に稼働する価値があります。':'晴れの日に稼働を増やすと効果的かもしれません。'}`
+        });
+      }
+    }
+  }
+
+  // ── B. 先月との変化を文章化 ──
+  if(prevS > 0){
+    const salesDiff = curS - prevS;
+    const salesPct = Math.round(salesDiff/prevS*100);
+    const countDiff = curC - prevC;
+    insights.push({
+      type: salesDiff>=0?'positive':'negative', icon: salesDiff>=0?'📈':'📉',
+      title:`先月比 売上${salesDiff>=0?'+':''}${salesPct}%`,
+      body:`売上は先月より¥${Math.abs(salesDiff).toLocaleString()}${salesDiff>=0?'増':'減'}（${curS.toLocaleString()}→${prevS.toLocaleString()}円ではなく${curS.toLocaleString()}円）。件数は${countDiff>=0?'+':''}${countDiff}件でした。`
+    });
+
+    // 稼働日数の変化
+    const prevActiveDays = pf.filter(r=>totalOf(r)>0).length;
+    const daysDiff = activeLen - prevActiveDays;
+    if(Math.abs(daysDiff)>=2){
+      insights.push({
+        type: daysDiff>0?'positive':'negative', icon:'📆',
+        title:`稼働日数が先月より${Math.abs(daysDiff)}日${daysDiff>0?'増':'減'}`,
+        body:`今月${activeLen}日稼働（先月${prevActiveDays}日）。${daysDiff>0?'稼働日数が増えたことが売上増加に貢献しています。':'稼働日数が減っています。体調や休息との兼ね合いを確認してみましょう。'}`
+      });
+    }
+
+    // 単価の変化
+    const prevUnit = prevC>0?Math.round(prevS/prevC):0;
+    const curUnit = curC>0?Math.round(curS/curC):0;
+    if(prevUnit>0){
+      const unitDiff = Math.round((curUnit-prevUnit)/prevUnit*100);
+      if(Math.abs(unitDiff)>=5){
+        insights.push({
+          type: unitDiff>=0?'positive':'negative', icon:'💴',
+          title:`平均単価が先月より${unitDiff>=0?'+':''}${unitDiff}%`,
+          body:`今月の単価¥${curUnit.toLocaleString()} vs 先月¥${prevUnit.toLocaleString()}。${unitDiff>0?'単価が上がっており、効率よく稼げています。':'単価が下がっています。件数を増やすか、単価の高いプラットフォームに注力してみましょう。'}`
+        });
+      }
+    }
+  }
+
+  // ── C. 改善提案 ──
+  // 稼働が少ない曜日で伸びしろ検出
+  const underusedDow = validDow.filter(d=>{
+    const monthDowDays = f.filter(r=>new Date(r.date+'T00:00:00').getDay()===d.idx&&totalOf(r)>0).length;
+    return d.avg>=avgDaySales*1.1 && monthDowDays<=1;
+  });
+  if(underusedDow.length>0){
+    const d = underusedDow[0];
+    insights.push({
+      type:'suggest', icon:'💡',
+      title:`${d.day}曜日の稼働を増やすと伸びしろがあります`,
+      body:`${d.day}曜日は過去データで平均¥${d.avg.toLocaleString()}と高いですが、今月は稼働が少ないです。意識的に${d.day}曜日を稼働日に入れると、月間売上が上がる可能性があります。`
+    });
+  }
+
+  // 連続稼働の提案
+  if(streak>=5){
+    insights.push({
+      type:'positive', icon:'🔥',
+      title:`${streak}日連続稼働中！休息も忘れずに`,
+      body:`連続稼働は稼ぎを増やしますが、疲労が蓄積すると効率が落ちます。意識的に休息日を設けることも重要です。`
+    });
+  }
+
+  // 今月の稼働密度
+  const today2=new Date();
+  const passed=today2.toISOString().slice(0,7)===month?today2.getDate():new Date(y,m,0).getDate();
+  const workRate = Math.round(activeLen/passed*100);
+  if(workRate<50 && passed>=10){
+    insights.push({
+      type:'suggest', icon:'📌',
+      title:`今月の稼働率${workRate}%（${passed}日中${activeLen}日）`,
+      body:`稼働できていない日が多めです。週に1〜2日だけでも稼働日を増やすことで、月間売上は大きく変わります。`
+    });
+  } else if(workRate>=80){
+    insights.push({
+      type:'positive', icon:'💪',
+      title:`今月の稼働率${workRate}%と高水準`,
+      body:`${passed}日中${activeLen}日稼働しています。高い稼働率を維持できています。`
+    });
+  }
+
+  if(!insights.length){
+    return '<div style="font-size:13px;color:var(--text2);padding:12px">データが少ないためレポートを生成できません。数日分のデータが溜まると自動で分析されます。</div>';
+  }
+
+  const colorMap = {fact:'rgba(69,132,182,0.1)', positive:'rgba(6,193,103,0.1)', negative:'rgba(233,30,99,0.08)', suggest:'rgba(186,117,23,0.1)'};
+  const borderMap = {fact:'#4584b6', positive:'var(--uber)', negative:'var(--down)', suggest:'#BA7517'};
+
+  return insights.map(ins=>`
+    <div style="background:${colorMap[ins.type]};border-left:3px solid ${borderMap[ins.type]};border-radius:var(--radius);padding:11px 14px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${ins.icon} ${ins.title}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6">${ins.body}</div>
+    </div>
+  `).join('');
+}
+
 function diffHtml(cur,prev,label){
   if(!prev) return `<div class="sdiff neu">--% ${label}</div>`;
   const p=Math.round((cur-prev)/prev*100);
@@ -1219,6 +1365,8 @@ function renderSummary(){
     <div style="position:relative;width:100%;height:140px"><canvas id="chart2"></canvas></div>
     <div class="section-title" style="margin-top:14px">プラットフォーム別 月次推移（直近6ヶ月）</div>
     <div style="position:relative;width:100%;height:160px"><canvas id="chart3"></canvas></div>
+    <div class="section-title" style="margin-top:14px">📊 今月の気づきレポート</div>
+    <div id="insight-report" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">${generateInsightReport({f,pf,curS,prevS,curC,prevC,active,avgDaySales,dowStats,wStats,month,y,m,records,streak})}</div>
   `;
 
   document.getElementById('inp-goal').addEventListener('change',e=>saveGoal(month,e.target.value));
