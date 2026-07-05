@@ -28,6 +28,8 @@ body{display:flex;flex-direction:column}
 /* ログインゲート */
 .login-gate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
 .login-gate.hide{display:none}
+.login-checking.hide,.login-box.hide{display:none}
+.login-checking{text-align:center}
 .login-box{width:100%;max-width:320px}
 .login-title{font-size:20px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:4px;justify-content:center}
 .login-sub{font-size:13px;color:var(--text2);margin-bottom:18px;text-align:center}
@@ -300,7 +302,11 @@ body{display:flex;flex-direction:column}
 <body>
 
 <div id="login-gate" class="login-gate">
-  <div class="login-box">
+  <div class="login-checking" id="login-checking">
+    <div class="login-title"><i class="ti ti-motorbike"></i> 配達記録</div>
+    <div class="login-sub">確認中...</div>
+  </div>
+  <div class="login-box hide" id="login-box">
     <div class="login-title"><i class="ti ti-motorbike"></i> 配達記録</div>
     <div class="login-sub">ログインしてください</div>
     <div class="field"><label>メールアドレス</label><input type="email" id="login-email" autocomplete="username"></div>
@@ -2455,8 +2461,10 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
   let appStarted=false;
   onAuthStateChanged(auth, async user=>{
+    document.getElementById('login-checking').classList.add('hide');
     if(user){
       document.getElementById('login-gate').classList.add('hide');
+      document.getElementById('login-box').classList.add('hide');
       if(!appStarted){
         appStarted=true;
         await loadTaxState();
@@ -2464,6 +2472,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
       }
     }else{
       document.getElementById('login-gate').classList.remove('hide');
+      document.getElementById('login-box').classList.remove('hide');
     }
   });
 });
