@@ -524,7 +524,7 @@ body{display:flex;flex-direction:column}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -539,7 +539,10 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 const auth = getAuth(app);
 
-let records  = [];
+let records  = [];       // liveRecords と archiveRecords をマージした最終形（表示にはこれを使う）
+let liveRecords = [];    // 直近window分。onSnapshotでリアルタイム同期
+let archiveRecords = []; // window外の年を表示した時だけ一度だけ読み込む分
+const loadedYears = new Set();
 let expenses = {};
 let goals    = {};
 let monthOffset = 0;
@@ -889,11 +892,43 @@ function loadEntryForDate(date){
 }
 
 // ── Firebase ──────────────────────────────────
+// 直近何日分だけをリアルタイム同期するか（15ヶ月ぶん確保。月次/年次の前年比較まで賄える）
+const LIVE_WINDOW_DAYS = 460;
+function liveWindowCutoff(){
+  const d=new Date();
+  d.setDate(d.getDate()-LIVE_WINDOW_DAYS);
+  return d.toISOString().slice(0,10);
+}
+function rebuildRecords(){
+  const byDate=new Map();
+  archiveRecords.forEach(r=>byDate.set(r.date,r));
+  liveRecords.forEach(r=>byDate.set(r.date,r)); // 重複時はライブ側を優先
+  records=[...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
+// window外の年を表示しようとした時だけ、その年ぶんを一度だけ読み込む（読み取り課金を抑えるため）
+async function ensureYearLoaded(year){
+  if(loadedYears.has(year)) return false;
+  if(`${year}-01-01` >= liveWindowCutoff()){ loadedYears.add(year); return false; } // すでにライブ範囲内
+  loadedYears.add(year);
+  try{
+    const qy=query(collection(db,'delivery_records'), where('date','>=',`${year}-01-01`), where('date','<=',`${year}-12-31`));
+    const snap=await getDocs(qy);
+    const fetched=[];
+    snap.forEach(d=>fetched.push({date:d.id,...d.data()}));
+    archiveRecords=archiveRecords.filter(r=>!r.date.startsWith(year)).concat(fetched);
+    rebuildRecords();
+    return true;
+  }catch(e){
+    console.error('年間データの読み込みに失敗',e);
+    return false;
+  }
+}
+
 function listenToDatabase(){
-  onSnapshot(collection(db,'delivery_records'),snap=>{
-    records=[];
-    snap.forEach(d=>records.push({date:d.id,...d.data()}));
-    records.sort((a,b)=>a.date.localeCompare(b.date));
+  onSnapshot(query(collection(db,'delivery_records'), where('date','>=',liveWindowCutoff())),snap=>{
+    liveRecords=[];
+    snap.forEach(d=>liveRecords.push({date:d.id,...d.data()}));
+    rebuildRecords();
     const cur=document.getElementById('inp-date').value;
     // 稼働中セッションがある場合は入力欄の上書きをスキップ
     const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
@@ -1374,6 +1409,10 @@ function diffHtml(cur,prev,label){
 // ── 分析ページ ────────────────────────────────
 function renderSummary(){
   const month=getMonthStr();
+  const[yChk]=month.split('-').map(Number);
+  Promise.all([ensureYearLoaded(String(yChk)), ensureYearLoaded(String(yChk-1))]).then(results=>{
+    if(results.some(Boolean)) renderSummary();
+  });
   document.getElementById('month-label').textContent=month.replace('-','年')+'月';
   const f=records.filter(r=>r.date.startsWith(month));
   const[y,m]=month.split('-').map(Number);
@@ -1606,6 +1645,7 @@ function renderSummary(){
 let calSelected = null;
 function renderCal(){
   const month=getCalMonthStr();
+  ensureYearLoaded(month.slice(0,4)).then(changed=>{ if(changed) renderCal(); });
   document.getElementById('cal-label').textContent=month.replace('-','年')+'月';
   const[y,m]=month.split('-').map(Number);
   const today=todayStr();
@@ -1690,6 +1730,9 @@ function showCalDetail(date){
 // ── 年間ページ ────────────────────────────────
 function renderYear(){
   const year=getYearStr();
+  Promise.all([ensureYearLoaded(year), ensureYearLoaded(String(Number(year)-1))]).then(results=>{
+    if(results.some(Boolean)) renderYear();
+  });
   document.getElementById('year-label').textContent=year+'年 年間レポート';
   const yf=records.filter(r=>r.date.startsWith(year));
   const yearS=yf.reduce((s,r)=>s+totalOf(r),0),yearC=yf.reduce((s,r)=>s+countOf(r),0);
@@ -1808,6 +1851,9 @@ function getWeekDates(offset){
 function renderWeek(){
   const dates=getWeekDates(weekOffset);
   const start=dates[0], end=dates[6];
+  Promise.all([ensureYearLoaded(start.slice(0,4)), ensureYearLoaded(end.slice(0,4))]).then(results=>{
+    if(results.some(Boolean)) renderWeek();
+  });
   document.getElementById('week-label').textContent=
     `${start.slice(5).replace('-','/')} 〜 ${end.slice(5).replace('-','/')}`;
   const today=todayStr();
@@ -1964,6 +2010,8 @@ function calcTax(){
 
 function renderTax(){
   const s = taxState;
+  const yearStr0 = String(s.year);
+  ensureYearLoaded(yearStr0).then(changed=>{ if(changed) renderTax(); });
   const t = calcTax();
   const yearStr = String(s.year);
   const yearSales = t.yearSales;
