@@ -524,7 +524,7 @@ body{display:flex;flex-direction:column}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, documentId } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -911,7 +911,7 @@ async function ensureYearLoaded(year){
   if(`${year}-01-01` >= liveWindowCutoff()){ loadedYears.add(year); return false; } // すでにライブ範囲内
   loadedYears.add(year);
   try{
-    const qy=query(collection(db,'delivery_records'), where('date','>=',`${year}-01-01`), where('date','<=',`${year}-12-31`));
+    const qy=query(collection(db,'delivery_records'), where(documentId(),'>=',`${year}-01-01`), where(documentId(),'<=',`${year}-12-31`));
     const snap=await getDocs(qy);
     const fetched=[];
     snap.forEach(d=>fetched.push({date:d.id,...d.data()}));
@@ -925,7 +925,7 @@ async function ensureYearLoaded(year){
 }
 
 function listenToDatabase(){
-  onSnapshot(query(collection(db,'delivery_records'), where('date','>=',liveWindowCutoff())),snap=>{
+  onSnapshot(query(collection(db,'delivery_records'), where(documentId(),'>=',liveWindowCutoff())),snap=>{
     liveRecords=[];
     snap.forEach(d=>liveRecords.push({date:d.id,...d.data()}));
     rebuildRecords();
