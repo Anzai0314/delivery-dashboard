@@ -25,6 +25,14 @@
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;font-size:14px}
 body{display:flex;flex-direction:column}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:0.5px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
+/* ログインゲート */
+.login-gate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+.login-gate.hide{display:none}
+.login-box{width:100%;max-width:320px}
+.login-title{font-size:20px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:4px;justify-content:center}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:18px;text-align:center}
+.login-btn{width:100%;padding:12px;border-radius:var(--radius);border:none;background:var(--uber);color:#fff;font-weight:700;font-size:14px;margin-top:6px}
+.login-error{font-size:12px;color:var(--down);margin-top:10px;min-height:16px;text-align:center}
 .topbar-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:6px}
 .sync-status{font-size:11px;color:var(--text3)}
 .main{flex:1;overflow-y:auto;padding-bottom:70px}
@@ -290,6 +298,17 @@ body{display:flex;flex-direction:column}
 </head>
 <body>
 
+<div id="login-gate" class="login-gate">
+  <div class="login-box">
+    <div class="login-title"><i class="ti ti-motorbike"></i> 配達記録</div>
+    <div class="login-sub">ログインしてください</div>
+    <div class="field"><label>メールアドレス</label><input type="email" id="login-email" autocomplete="username"></div>
+    <div class="field"><label>パスワード</label><input type="password" id="login-pass" autocomplete="current-password"></div>
+    <button class="login-btn" id="btn-login">ログイン</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
 <div class="topbar">
   <span class="topbar-title"><i class="ti ti-motorbike"></i> 配達記録</span>
   <span class="sync-status" id="sync-status">接続中...</span>
@@ -498,6 +517,7 @@ body{display:flex;flex-direction:column}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCKZfC6PtJFVEIgNYEy5nIxrtaw68rinRo",
@@ -509,6 +529,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
+const auth = getAuth(app);
 
 let records  = [];
 let expenses = {};
@@ -2396,8 +2417,39 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('inp-note').addEventListener('change',scheduleAutoSave);
 
   fetchForecast();
-  await loadTaxState();
-  listenToDatabase();
+
+  // ── ログインゲート ──
+  setPersistence(auth, browserLocalPersistence).catch(()=>{});
+
+  const doLogin = async ()=>{
+    const email = document.getElementById('login-email').value.trim();
+    const pass  = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
+    errEl.textContent='';
+    if(!email || !pass){ errEl.textContent='メールアドレスとパスワードを入力してください'; return; }
+    try{
+      await signInWithEmailAndPassword(auth, email, pass);
+    }catch(err){
+      errEl.textContent='ログインに失敗しました。メールアドレスかパスワードをご確認ください';
+    }
+  };
+  document.getElementById('btn-login').addEventListener('click', doLogin);
+  document.getElementById('login-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+  document.getElementById('login-email').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+
+  let appStarted=false;
+  onAuthStateChanged(auth, async user=>{
+    if(user){
+      document.getElementById('login-gate').classList.add('hide');
+      if(!appStarted){
+        appStarted=true;
+        await loadTaxState();
+        listenToDatabase();
+      }
+    }else{
+      document.getElementById('login-gate').classList.remove('hide');
+    }
+  });
 });
 </script>
 </body>
