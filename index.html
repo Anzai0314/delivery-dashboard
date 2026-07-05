@@ -33,6 +33,7 @@ body{display:flex;flex-direction:column}
 .login-sub{font-size:13px;color:var(--text2);margin-bottom:18px;text-align:center}
 .login-btn{width:100%;padding:12px;border-radius:var(--radius);border:none;background:var(--uber);color:#fff;font-weight:700;font-size:14px;margin-top:6px}
 .login-error{font-size:12px;color:var(--down);margin-top:10px;min-height:16px;text-align:center}
+.login-forgot{font-size:12px;color:var(--text2);text-align:center;margin-top:14px;text-decoration:underline;cursor:pointer}
 .topbar-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:6px}
 .sync-status{font-size:11px;color:var(--text3)}
 .main{flex:1;overflow-y:auto;padding-bottom:70px}
@@ -305,6 +306,7 @@ body{display:flex;flex-direction:column}
     <div class="field"><label>メールアドレス</label><input type="email" id="login-email" autocomplete="username"></div>
     <div class="field"><label>パスワード</label><input type="password" id="login-pass" autocomplete="current-password"></div>
     <button class="login-btn" id="btn-login">ログイン</button>
+    <div class="login-forgot" id="btn-forgot">パスワードをお忘れの方はこちら</div>
     <div class="login-error" id="login-error"></div>
   </div>
 </div>
@@ -517,7 +519,7 @@ body{display:flex;flex-direction:column}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCKZfC6PtJFVEIgNYEy5nIxrtaw68rinRo",
@@ -2436,6 +2438,20 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('btn-login').addEventListener('click', doLogin);
   document.getElementById('login-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
   document.getElementById('login-email').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+
+  document.getElementById('btn-forgot').addEventListener('click', async ()=>{
+    const email = document.getElementById('login-email').value.trim();
+    const errEl = document.getElementById('login-error');
+    if(!email){ errEl.style.color='var(--down)'; errEl.textContent='まずメールアドレス欄に入力してください'; return; }
+    try{
+      await sendPasswordResetEmail(auth, email);
+      errEl.style.color='var(--uber)';
+      errEl.textContent='再設定用のメールを送信しました。届いたメールをご確認ください';
+    }catch(err){
+      errEl.style.color='var(--down)';
+      errEl.textContent='送信に失敗しました。メールアドレスをご確認ください';
+    }
+  });
 
   let appStarted=false;
   onAuthStateChanged(auth, async user=>{
