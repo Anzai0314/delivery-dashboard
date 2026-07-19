@@ -498,6 +498,7 @@ body{display:flex;flex-direction:column}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCKZfC6PtJFVEIgNYEy5nIxrtaw68rinRo",
@@ -509,6 +510,7 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
+const auth = getAuth(app);
 
 let records  = [];
 let expenses = {};
@@ -861,6 +863,20 @@ function loadEntryForDate(date){
 
 // ── Firebase ──────────────────────────────────
 function listenToDatabase(){
+  onAuthStateChanged(auth, user=>{
+    if(!user) return; // 未認証の間は何もしない（signInAnonymouslyの結果を待つ）
+    attachFirestoreListeners();
+  });
+  signInAnonymously(auth).catch(err=>{
+    console.error('匿名認証エラー:', err);
+    document.getElementById('sync-status').textContent='認証エラー';
+  });
+}
+
+let listenersAttached=false;
+function attachFirestoreListeners(){
+  if(listenersAttached) return; // onAuthStateChangedが複数回発火しても二重登録しない
+  listenersAttached=true;
   onSnapshot(collection(db,'delivery_records'),snap=>{
     records=[];
     snap.forEach(d=>records.push({date:d.id,...d.data()}));
@@ -1686,7 +1702,7 @@ function renderYear(){
   // 表示中の年が「今日」を含む年のときだけ、今月1日〜今日と同じ日数分で
   // 「先月」「前年同月」を公平に比較する（月が終わっていない月同士の比較のため）
   let mtdBlock='';
-  {
+  try{
     const realNow=new Date();
     const realYear=realNow.getFullYear(), realMonth=realNow.getMonth()+1, realDay=realNow.getDate();
     if(String(realYear)===year){
@@ -1715,7 +1731,7 @@ function renderYear(){
         </div>
       `;
     }
-  }
+  }catch(e){ console.error('MTD比較の計算でエラー:',e); mtdBlock=''; }
 
   const months=Array.from({length:12},(_,i)=>{
     const mo=`${year}-${String(i+1).padStart(2,'0')}`;
