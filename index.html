@@ -25,17 +25,6 @@
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;font-size:14px}
 body{display:flex;flex-direction:column}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:0.5px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
-/* ログインゲート */
-.login-gate{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
-.login-gate.hide{display:none}
-.login-checking.hide,.login-box.hide{display:none}
-.login-checking{text-align:center}
-.login-box{width:100%;max-width:320px}
-.login-title{font-size:20px;font-weight:700;display:flex;align-items:center;gap:6px;margin-bottom:4px;justify-content:center}
-.login-sub{font-size:13px;color:var(--text2);margin-bottom:18px;text-align:center}
-.login-btn{width:100%;padding:12px;border-radius:var(--radius);border:none;background:var(--uber);color:#fff;font-weight:700;font-size:14px;margin-top:6px}
-.login-error{font-size:12px;color:var(--down);margin-top:10px;min-height:16px;text-align:center}
-.login-forgot{font-size:12px;color:var(--text2);text-align:center;margin-top:14px;text-decoration:underline;cursor:pointer}
 .topbar-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:6px}
 .sync-status{font-size:11px;color:var(--text3)}
 .main{flex:1;overflow-y:auto;padding-bottom:70px}
@@ -301,22 +290,6 @@ body{display:flex;flex-direction:column}
 </head>
 <body>
 
-<div id="login-gate" class="login-gate">
-  <div class="login-checking" id="login-checking">
-    <div class="login-title"><i class="ti ti-motorbike"></i> 配達記録</div>
-    <div class="login-sub">確認中...</div>
-  </div>
-  <div class="login-box hide" id="login-box">
-    <div class="login-title"><i class="ti ti-motorbike"></i> 配達記録</div>
-    <div class="login-sub">ログインしてください</div>
-    <div class="field"><label>メールアドレス</label><input type="email" id="login-email" autocomplete="username"></div>
-    <div class="field"><label>パスワード</label><input type="password" id="login-pass" autocomplete="current-password"></div>
-    <button class="login-btn" id="btn-login">ログイン</button>
-    <div class="login-forgot" id="btn-forgot">パスワードをお忘れの方はこちら</div>
-    <div class="login-error" id="login-error"></div>
-  </div>
-</div>
-
 <div class="topbar">
   <span class="topbar-title"><i class="ti ti-motorbike"></i> 配達記録</span>
   <span class="sync-status" id="sync-status">接続中...</span>
@@ -524,8 +497,7 @@ body{display:flex;flex-direction:column}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, onSnapshot, query, where, documentId } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCKZfC6PtJFVEIgNYEy5nIxrtaw68rinRo",
@@ -537,12 +509,8 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
-const auth = getAuth(app);
 
-let records  = [];       // liveRecords と archiveRecords をマージした最終形（表示にはこれを使う）
-let liveRecords = [];    // 直近window分。onSnapshotでリアルタイム同期
-let archiveRecords = []; // window外の年を表示した時だけ一度だけ読み込む分
-const loadedYears = new Set();
+let records  = [];
 let expenses = {};
 let goals    = {};
 let monthOffset = 0;
@@ -892,43 +860,11 @@ function loadEntryForDate(date){
 }
 
 // ── Firebase ──────────────────────────────────
-// 直近何日分だけをリアルタイム同期するか（15ヶ月ぶん確保。月次/年次の前年比較まで賄える）
-const LIVE_WINDOW_DAYS = 460;
-function liveWindowCutoff(){
-  const d=new Date();
-  d.setDate(d.getDate()-LIVE_WINDOW_DAYS);
-  return d.toISOString().slice(0,10);
-}
-function rebuildRecords(){
-  const byDate=new Map();
-  archiveRecords.forEach(r=>byDate.set(r.date,r));
-  liveRecords.forEach(r=>byDate.set(r.date,r)); // 重複時はライブ側を優先
-  records=[...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date));
-}
-// window外の年を表示しようとした時だけ、その年ぶんを一度だけ読み込む（読み取り課金を抑えるため）
-async function ensureYearLoaded(year){
-  if(loadedYears.has(year)) return false;
-  if(`${year}-01-01` >= liveWindowCutoff()){ loadedYears.add(year); return false; } // すでにライブ範囲内
-  loadedYears.add(year);
-  try{
-    const qy=query(collection(db,'delivery_records'), where(documentId(),'>=',`${year}-01-01`), where(documentId(),'<=',`${year}-12-31`));
-    const snap=await getDocs(qy);
-    const fetched=[];
-    snap.forEach(d=>fetched.push({date:d.id,...d.data()}));
-    archiveRecords=archiveRecords.filter(r=>!r.date.startsWith(year)).concat(fetched);
-    rebuildRecords();
-    return true;
-  }catch(e){
-    console.error('年間データの読み込みに失敗',e);
-    return false;
-  }
-}
-
 function listenToDatabase(){
-  onSnapshot(query(collection(db,'delivery_records'), where(documentId(),'>=',liveWindowCutoff())),snap=>{
-    liveRecords=[];
-    snap.forEach(d=>liveRecords.push({date:d.id,...d.data()}));
-    rebuildRecords();
+  onSnapshot(collection(db,'delivery_records'),snap=>{
+    records=[];
+    snap.forEach(d=>records.push({date:d.id,...d.data()}));
+    records.sort((a,b)=>a.date.localeCompare(b.date));
     const cur=document.getElementById('inp-date').value;
     // 稼働中セッションがある場合は入力欄の上書きをスキップ
     const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
@@ -1409,10 +1345,6 @@ function diffHtml(cur,prev,label){
 // ── 分析ページ ────────────────────────────────
 function renderSummary(){
   const month=getMonthStr();
-  const[yChk]=month.split('-').map(Number);
-  Promise.all([ensureYearLoaded(String(yChk)), ensureYearLoaded(String(yChk-1))]).then(results=>{
-    if(results.some(Boolean)) renderSummary();
-  });
   document.getElementById('month-label').textContent=month.replace('-','年')+'月';
   const f=records.filter(r=>r.date.startsWith(month));
   const[y,m]=month.split('-').map(Number);
@@ -1645,7 +1577,6 @@ function renderSummary(){
 let calSelected = null;
 function renderCal(){
   const month=getCalMonthStr();
-  ensureYearLoaded(month.slice(0,4)).then(changed=>{ if(changed) renderCal(); });
   document.getElementById('cal-label').textContent=month.replace('-','年')+'月';
   const[y,m]=month.split('-').map(Number);
   const today=todayStr();
@@ -1730,9 +1661,6 @@ function showCalDetail(date){
 // ── 年間ページ ────────────────────────────────
 function renderYear(){
   const year=getYearStr();
-  Promise.all([ensureYearLoaded(year), ensureYearLoaded(String(Number(year)-1))]).then(results=>{
-    if(results.some(Boolean)) renderYear();
-  });
   document.getElementById('year-label').textContent=year+'年 年間レポート';
   const yf=records.filter(r=>r.date.startsWith(year));
   const yearS=yf.reduce((s,r)=>s+totalOf(r),0),yearC=yf.reduce((s,r)=>s+countOf(r),0);
@@ -1753,6 +1681,41 @@ function renderYear(){
     const estHrs = h>0?h:dist/AVG_SPEED;
     return s+Math.round(METS*WEIGHT*estHrs);
   }, 0);
+
+  // ── 今月の進捗（同日まで）比較 ──
+  // 表示中の年が「今日」を含む年のときだけ、今月1日〜今日と同じ日数分で
+  // 「先月」「前年同月」を公平に比較する（月が終わっていない月同士の比較のため）
+  let mtdBlock='';
+  {
+    const realNow=new Date();
+    const realYear=realNow.getFullYear(), realMonth=realNow.getMonth()+1, realDay=realNow.getDate();
+    if(String(realYear)===year){
+      const mtdSum=(ym,dayLimit)=>records.filter(r=>{
+        if(!r.date.startsWith(ym+'-')) return false;
+        const d=Number(r.date.split('-')[2]);
+        return d<=dayLimit;
+      }).reduce((s,r)=>s+totalOf(r),0);
+      const curYM=`${realYear}-${String(realMonth).padStart(2,'0')}`;
+      const prevD=new Date(realYear,realMonth-2,1);
+      const prevYM=`${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}`;
+      const lastYearYM=`${realYear-1}-${String(realMonth).padStart(2,'0')}`;
+      const curMTD=mtdSum(curYM,realDay);
+      const prevMTD=mtdSum(prevYM,realDay);
+      const lyMTD=mtdSum(lastYearYM,realDay);
+      mtdBlock=`
+        <div class="section-title">今月の進捗（同日まで比較）</div>
+        <div class="stat2">
+          <div class="stat-card stat-card-full">
+            <div class="slabel">${realMonth}月1日〜${realDay}日の売上</div>
+            <div class="sval" style="font-size:22px">¥${curMTD.toLocaleString()}</div>
+            <div class="sdiff">${diffHtml(curMTD,prevMTD,'先月同日比')}${diffHtml(curMTD,lyMTD,'前年同日比')}</div>
+          </div>
+          <div class="stat-card"><div class="slabel">先月${realDay}日まで</div><div class="sval">¥${prevMTD.toLocaleString()}</div></div>
+          <div class="stat-card"><div class="slabel">前年${realMonth}月${realDay}日まで</div><div class="sval">¥${lyMTD.toLocaleString()}</div></div>
+        </div>
+      `;
+    }
+  }
 
   const months=Array.from({length:12},(_,i)=>{
     const mo=`${year}-${String(i+1).padStart(2,'0')}`;
@@ -1784,6 +1747,7 @@ function renderYear(){
         <div class="stat-card"><div class="slabel">🔥 年間消費カロリー</div><div class="sval">${yearKcal.toLocaleString()}</div><div class="sdiff neu">kcal（推計）</div></div>
       `:''}
     </div>
+    ${mtdBlock}
     <div class="section-title">月別売上</div>
     <div style="position:relative;width:100%;height:160px;margin-bottom:12px"><canvas id="chart-year"></canvas></div>
     ${monthRows}
@@ -1851,9 +1815,6 @@ function getWeekDates(offset){
 function renderWeek(){
   const dates=getWeekDates(weekOffset);
   const start=dates[0], end=dates[6];
-  Promise.all([ensureYearLoaded(start.slice(0,4)), ensureYearLoaded(end.slice(0,4))]).then(results=>{
-    if(results.some(Boolean)) renderWeek();
-  });
   document.getElementById('week-label').textContent=
     `${start.slice(5).replace('-','/')} 〜 ${end.slice(5).replace('-','/')}`;
   const today=todayStr();
@@ -2010,8 +1971,6 @@ function calcTax(){
 
 function renderTax(){
   const s = taxState;
-  const yearStr0 = String(s.year);
-  ensureYearLoaded(yearStr0).then(changed=>{ if(changed) renderTax(); });
   const t = calcTax();
   const yearStr = String(s.year);
   const yearSales = t.yearSales;
@@ -2473,56 +2432,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('inp-note').addEventListener('change',scheduleAutoSave);
 
   fetchForecast();
-
-  // ── ログインゲート ──
-  setPersistence(auth, browserLocalPersistence).catch(()=>{});
-
-  const doLogin = async ()=>{
-    const email = document.getElementById('login-email').value.trim();
-    const pass  = document.getElementById('login-pass').value;
-    const errEl = document.getElementById('login-error');
-    errEl.textContent='';
-    if(!email || !pass){ errEl.textContent='メールアドレスとパスワードを入力してください'; return; }
-    try{
-      await signInWithEmailAndPassword(auth, email, pass);
-    }catch(err){
-      errEl.textContent='ログインに失敗しました。メールアドレスかパスワードをご確認ください';
-    }
-  };
-  document.getElementById('btn-login').addEventListener('click', doLogin);
-  document.getElementById('login-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
-  document.getElementById('login-email').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
-
-  document.getElementById('btn-forgot').addEventListener('click', async ()=>{
-    const email = document.getElementById('login-email').value.trim();
-    const errEl = document.getElementById('login-error');
-    if(!email){ errEl.style.color='var(--down)'; errEl.textContent='まずメールアドレス欄に入力してください'; return; }
-    try{
-      await sendPasswordResetEmail(auth, email);
-      errEl.style.color='var(--uber)';
-      errEl.textContent='再設定用のメールを送信しました。届いたメールをご確認ください';
-    }catch(err){
-      errEl.style.color='var(--down)';
-      errEl.textContent='送信に失敗しました。メールアドレスをご確認ください';
-    }
-  });
-
-  let appStarted=false;
-  onAuthStateChanged(auth, async user=>{
-    document.getElementById('login-checking').classList.add('hide');
-    if(user){
-      document.getElementById('login-gate').classList.add('hide');
-      document.getElementById('login-box').classList.add('hide');
-      if(!appStarted){
-        appStarted=true;
-        await loadTaxState();
-        listenToDatabase();
-      }
-    }else{
-      document.getElementById('login-gate').classList.remove('hide');
-      document.getElementById('login-box').classList.remove('hide');
-    }
-  });
+  await loadTaxState();
+  listenToDatabase();
 });
 </script>
 </body>
