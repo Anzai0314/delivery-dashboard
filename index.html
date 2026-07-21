@@ -27,6 +27,7 @@ body{display:flex;flex-direction:column}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:0.5px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
 .topbar-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:6px}
 .sync-status{font-size:11px;color:var(--text3)}
+.sync-status.saving{color:#BA7517}.sync-status.saved{color:var(--uber)}.sync-status.error{color:var(--down)}.sync-status.offline{color:#4A90D9}
 .main{flex:1;overflow-y:auto;padding-bottom:70px}
 .page{display:none;padding:16px}
 .page.active{display:block}
@@ -369,30 +370,30 @@ body{display:flex;flex-direction:column}
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
       <div class="plat-inputs">
-        <div><label>売上 (円)</label><input type="number" id="uber-s" placeholder="0" inputmode="numeric"></div>
-        <div><label>配達件数</label><input type="number" id="uber-c" placeholder="0" inputmode="numeric"></div>
+        <div><label>売上 (円)</label><input type="number" id="uber-s" placeholder="0" inputmode="numeric" min="0" step="1"></div>
+        <div><label>配達件数</label><input type="number" id="uber-c" placeholder="0" inputmode="numeric" min="0" step="1"></div>
       </div>
     </div>
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--demae)"></div>出前館</div>
       <div class="plat-inputs">
-        <div><label>売上 (円)</label><input type="number" id="demae-s" placeholder="0" inputmode="numeric"></div>
-        <div><label>配達件数</label><input type="number" id="demae-c" placeholder="0" inputmode="numeric"></div>
+        <div><label>売上 (円)</label><input type="number" id="demae-s" placeholder="0" inputmode="numeric" min="0" step="1"></div>
+        <div><label>配達件数</label><input type="number" id="demae-c" placeholder="0" inputmode="numeric" min="0" step="1"></div>
       </div>
     </div>
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--rocket)"></div>Rocket Now</div>
       <div class="plat-inputs">
-        <div><label>売上 (円)</label><input type="number" id="rocket-s" placeholder="0" inputmode="numeric"></div>
-        <div><label>配達件数</label><input type="number" id="rocket-c" placeholder="0" inputmode="numeric"></div>
+        <div><label>売上 (円)</label><input type="number" id="rocket-s" placeholder="0" inputmode="numeric" min="0" step="1"></div>
+        <div><label>配達件数</label><input type="number" id="rocket-c" placeholder="0" inputmode="numeric" min="0" step="1"></div>
       </div>
       <div class="note-row">
         <label>メモ（イベント・特記事項など）</label>
-        <textarea id="inp-note" placeholder="例：雨天・花火大会・渋滞あり"></textarea>
+        <textarea id="inp-note" maxlength="500" placeholder="例：雨天・花火大会・渋滞あり"></textarea>
       </div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
         <label style="font-size:11px;color:var(--text2);white-space:nowrap">本日の走行距離</label>
-        <input type="number" id="inp-distance" placeholder="0" inputmode="decimal" step="0.1"
+        <input type="number" id="inp-distance" placeholder="0" inputmode="decimal" min="0" max="2000" step="0.1"
           style="flex:1;padding:9px 10px;border-radius:var(--radius);border:0.5px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px">
         <span style="font-size:13px;color:var(--text2)">km</span>
       </div>
@@ -403,9 +404,9 @@ body{display:flex;flex-direction:column}
   <!-- ② 分析ページ -->
   <div id="page-summary" class="page">
     <div class="month-bar">
-      <button id="btn-prev-month"><i class="ti ti-chevron-left"></i></button>
+      <button id="btn-prev-month" aria-label="前の月"><i class="ti ti-chevron-left"></i></button>
       <span id="month-label"></span>
-      <button id="btn-next-month"><i class="ti ti-chevron-right"></i></button>
+      <button id="btn-next-month" aria-label="次の月"><i class="ti ti-chevron-right"></i></button>
     </div>
     <div id="summary-content"></div>
   </div>
@@ -413,9 +414,9 @@ body{display:flex;flex-direction:column}
   <!-- ③ カレンダーページ -->
   <div id="page-cal" class="page">
     <div class="cal-nav">
-      <button id="btn-cal-prev"><i class="ti ti-chevron-left"></i></button>
+      <button id="btn-cal-prev" aria-label="前の月"><i class="ti ti-chevron-left"></i></button>
       <span id="cal-label"></span>
-      <button id="btn-cal-next"><i class="ti ti-chevron-right"></i></button>
+      <button id="btn-cal-next" aria-label="次の月"><i class="ti ti-chevron-right"></i></button>
     </div>
     <div class="cal-month-stats" id="cal-month-stats"></div>
     <div class="cal-grid" id="cal-grid"></div>
@@ -427,8 +428,8 @@ body{display:flex;flex-direction:column}
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <span style="font-size:15px;font-weight:600" id="year-label"></span>
       <div style="display:flex;gap:8px">
-        <button class="date-btn" id="btn-prev-year"><i class="ti ti-chevron-left"></i></button>
-        <button class="date-btn" id="btn-next-year"><i class="ti ti-chevron-right"></i></button>
+        <button class="date-btn" id="btn-prev-year" aria-label="前年"><i class="ti ti-chevron-left"></i></button>
+        <button class="date-btn" id="btn-next-year" aria-label="翌年"><i class="ti ti-chevron-right"></i></button>
       </div>
     </div>
     <div id="year-content"></div>
@@ -437,9 +438,9 @@ body{display:flex;flex-direction:column}
   <!-- ⑤ 週次ページ -->
   <div id="page-week" class="page">
     <div class="month-bar">
-      <button id="btn-prev-week"><i class="ti ti-chevron-left"></i></button>
+      <button id="btn-prev-week" aria-label="前の週"><i class="ti ti-chevron-left"></i></button>
       <span id="week-label"></span>
-      <button id="btn-next-week"><i class="ti ti-chevron-right"></i></button>
+      <button id="btn-next-week" aria-label="次の週"><i class="ti ti-chevron-right"></i></button>
     </div>
     <div id="week-content"></div>
   </div>
@@ -498,7 +499,6 @@ body{display:flex;flex-direction:column}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCKZfC6PtJFVEIgNYEy5nIxrtaw68rinRo",
@@ -510,7 +510,6 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
-const auth = getAuth(app);
 
 let records  = [];
 let expenses = {};
@@ -521,6 +520,25 @@ let yearOffset  = 0;
 let weekOffset  = 0;
 let countupInterval = null;
 let chartInstances = {};
+let hasUnsavedChanges = false;
+let saveSequence = 0;
+const DRAFT_PREFIX = 'delivery-record-draft:';
+
+function setSyncStatus(text,state=''){
+  const el=document.getElementById('sync-status');
+  if(!el) return;
+  el.textContent=text;
+  el.className=`sync-status ${state}`.trim();
+}
+function setDirty(flag=true){ hasUnsavedChanges=flag; }
+function draftKey(date){ return DRAFT_PREFIX+date; }
+function saveLocalDraft(date,rec){
+  try{ localStorage.setItem(draftKey(date),JSON.stringify({...rec,_savedAt:Date.now()})); }catch(e){}
+}
+function clearLocalDraft(date){ try{ localStorage.removeItem(draftKey(date)); }catch(e){} }
+function readLocalDraft(date){
+  try{ const raw=localStorage.getItem(draftKey(date)); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+}
 
 // セッション管理（当日のメモリ上）
 // sessions = [ {depart:"HH:MM", return:"HH:MM"|null}, ... ]
@@ -553,8 +571,12 @@ function sessionsToHours(sess){
     if(!s.depart||!s.return) return;
     const[dh,dm]=s.depart.split(':').map(Number);
     const[rh,rm]=s.return.split(':').map(Number);
-    const diff=(rh*60+rm)-(dh*60+dm);
-    if(diff>0) mins+=diff;
+    if([dh,dm,rh,rm].some(Number.isNaN)) return;
+    let diff=(rh*60+rm)-(dh*60+dm);
+    // 帰宅時刻が出発以前なら翌日帰宅として扱う
+    if(diff<=0) diff+=24*60;
+    // 異常値は集計しない
+    if(diff>0 && diff<=24*60) mins+=diff;
   });
   return mins/60;
 }
@@ -564,8 +586,9 @@ function hoursOf(r){
   if(!r.start||!r.end) return 0;
   const[sh,sm]=r.start.split(':').map(Number);
   const[eh,em]=r.end.split(':').map(Number);
-  const m=(eh*60+em)-(sh*60+sm);
-  return m>0?m/60:0;
+  let m=(eh*60+em)-(sh*60+sm);
+  if(m<=0) m+=24*60;
+  return m>0&&m<=24*60?m/60:0;
 }
 
 function fmtHours(h){
@@ -712,6 +735,7 @@ function renderSessions(){
   list.querySelectorAll('.sr-del').forEach(btn=>{
     btn.addEventListener('click',e=>{
       const i=+e.currentTarget.dataset.i;
+      if(!confirm(`${sessions[i].depart}からのセッションを削除しますか？`)) return;
       sessions.splice(i,1);
       renderSessions();
       updateDailyTotal();
@@ -857,26 +881,31 @@ function loadEntryForDate(date){
     document.getElementById('inp-distance').value='';
     hint.textContent=''; hint.className='entry-hint';
   }
-  loadSessions(date);
+  const draft=readLocalDraft(date);
+  if(draft && (!ex || String(draft.updatedAt||'')>String(ex.updatedAt||''))){
+    document.getElementById('uber-s').value=draft.uber?.sales||'';
+    document.getElementById('uber-c').value=draft.uber?.count||'';
+    document.getElementById('demae-s').value=draft.demae?.sales||'';
+    document.getElementById('demae-c').value=draft.demae?.count||'';
+    document.getElementById('rocket-s').value=draft.rocket?.sales||'';
+    document.getElementById('rocket-c').value=draft.rocket?.count||'';
+    document.getElementById('inp-weather').value=draft.weather||'sunny';
+    document.getElementById('inp-note').value=draft.note||'';
+    document.getElementById('inp-distance').value=draft.distance||'';
+    sessions=Array.isArray(draft.sessions)?draft.sessions:[];
+    sessionDate=date;
+    hint.textContent='⚠ 未同期の端末保存データを復元しました';
+    hint.className='entry-hint show';
+    setDirty(true);
+    renderSessions();
+  }else{
+    loadSessions(date);
+  }
   updateDailyTotal();
 }
 
 // ── Firebase ──────────────────────────────────
 function listenToDatabase(){
-  onAuthStateChanged(auth, user=>{
-    if(!user) return; // 未認証の間は何もしない（signInAnonymouslyの結果を待つ）
-    attachFirestoreListeners();
-  });
-  signInAnonymously(auth).catch(err=>{
-    console.error('匿名認証エラー:', err);
-    document.getElementById('sync-status').textContent='認証エラー';
-  });
-}
-
-let listenersAttached=false;
-function attachFirestoreListeners(){
-  if(listenersAttached) return; // onAuthStateChangedが複数回発火しても二重登録しない
-  listenersAttached=true;
   onSnapshot(collection(db,'delivery_records'),snap=>{
     records=[];
     snap.forEach(d=>records.push({date:d.id,...d.data()}));
@@ -887,8 +916,8 @@ function attachFirestoreListeners(){
     if(cur && !inSession){ loadEntryForDate(cur); }
     fetchForecast();
     updateViews();
-    document.getElementById('sync-status').textContent='同期完了 ✓';
-  },()=>document.getElementById('sync-status').textContent='同期エラー');
+    setSyncStatus('同期完了 ✓','saved');
+  },()=>setSyncStatus(navigator.onLine?'同期エラー':'オフライン','error'));
 
   onSnapshot(collection(db,'monthly_expenses'),snap=>{
     expenses={};
@@ -940,35 +969,65 @@ function changeDay(offset){
 // ── 保存（silent=trueで自動保存、通知なし） ────
 let autoSaveTimer=null;
 function scheduleAutoSave(){
+  setDirty(true);
   clearTimeout(autoSaveTimer);
   autoSaveTimer=setTimeout(()=>saveRecord(true),800);
 }
 
 async function saveRecord(silent=false){
   const date=document.getElementById('inp-date').value;
-  if(!date){ if(!silent) showToast('日付を入力してください'); return; }
-  const rec={
-    weather:document.getElementById('inp-weather').value,
-    uber:  {sales:+document.getElementById('uber-s').value||0,count:+document.getElementById('uber-c').value||0},
-    demae: {sales:+document.getElementById('demae-s').value||0,count:+document.getElementById('demae-c').value||0},
-    rocket:{sales:+document.getElementById('rocket-s').value||0,count:+document.getElementById('rocket-c').value||0},
-    sessions: sessions.filter(s=>s.depart),
-    distance: +document.getElementById('inp-distance').value||0,
-    kcal: todayKcal||0,
-    note: document.getElementById('inp-note').value||''
+  if(!date){ if(!silent) showToast('日付を入力してください'); return false; }
+
+  const numberValue=(id,{integer=false,max=Number.MAX_SAFE_INTEGER}={})=>{
+    const raw=document.getElementById(id).value;
+    const n=raw===''?0:Number(raw);
+    if(!Number.isFinite(n)||n<0||n>max||(integer&&!Number.isInteger(n))) throw new Error(id);
+    return n;
   };
+
+  let rec;
   try{
-    document.getElementById('sync-status').textContent='保存中...';
+    rec={
+      schemaVersion:2,
+      weather:document.getElementById('inp-weather').value,
+      uber:  {sales:numberValue('uber-s',{integer:true}),count:numberValue('uber-c',{integer:true})},
+      demae: {sales:numberValue('demae-s',{integer:true}),count:numberValue('demae-c',{integer:true})},
+      rocket:{sales:numberValue('rocket-s',{integer:true}),count:numberValue('rocket-c',{integer:true})},
+      sessions: sessions.filter(s=>s.depart).map(s=>({depart:s.depart,return:s.return||null})),
+      distance:numberValue('inp-distance',{max:2000}),
+      kcal:Math.max(0,Number(todayKcal)||0),
+      note:(document.getElementById('inp-note').value||'').trim(),
+      updatedAt:new Date().toISOString()
+    };
+  }catch(e){
+    setSyncStatus('入力エラー','error');
+    if(!silent) showToast('数値は0以上で入力してください');
+    return false;
+  }
+
+  const currentSequence=++saveSequence;
+  saveLocalDraft(date,rec);
+  setSyncStatus(navigator.onLine?'保存中...':'オフライン・端末保存済み',navigator.onLine?'saving':'offline');
+
+  try{
     await setDoc(doc(db,'delivery_records',date),rec);
-    document.getElementById('sync-status').textContent='同期完了 ✓';
+    if(currentSequence!==saveSequence) return true;
+    clearLocalDraft(date);
+    setDirty(false);
+    setSyncStatus('保存済み ✓','saved');
     const hint=document.getElementById('entry-hint');
-    hint.textContent='✓ 保存済みデータを読み込みました（上書き保存できます）';
+    hint.textContent='✓ 保存しました';
     hint.className='entry-hint show loaded';
     if(!silent) showToast('保存しました ✓');
     updateDailyTotal();
-  }catch(e){ if(!silent) showToast('保存に失敗しました'); }
+    return true;
+  }catch(e){
+    setDirty(true);
+    setSyncStatus('未同期・端末に保存','error');
+    if(!silent) showToast('通信できません。端末に一時保存しました');
+    return false;
+  }
 }
-
 async function saveTaxState(){
   try{ await setDoc(doc(db,'tax_settings','default'), taxState); }catch(e){}
 }
@@ -1698,39 +1757,40 @@ function renderYear(){
     return s+Math.round(METS*WEIGHT*estHrs);
   }, 0);
 
-  // ── 「今日と同じ日」までの月別収入比較（1年分）──
-  // 例: 今日が19日なら、この年の1月〜12月それぞれについて
-  // 「1日〜19日」の売上を横並びで比較できるようにする
+  // ── 今月の進捗（同日まで）比較 ──
+  // 表示中の年が「今日」を含む年のときだけ、今月1日〜今日と同じ日数分で
+  // 「先月」「前年同月」を公平に比較する（月が終わっていない月同士の比較のため）
   let mtdBlock='';
-  try{
+  {
     const realNow=new Date();
-    const dayCutoff=realNow.getDate();
-
-    const mtdSum=(ym,dayLimit)=>records.filter(r=>{
-      if(!r.date.startsWith(ym+'-')) return false;
-      const d=Number(r.date.split('-')[2]);
-      return d<=dayLimit;
-    }).reduce((s,r)=>s+totalOf(r),0);
-
-    const realYM=`${realNow.getFullYear()}-${String(realNow.getMonth()+1).padStart(2,'0')}`;
-    const mtdMonths=Array.from({length:12},(_,i)=>{
-      const ym=`${year}-${String(i+1).padStart(2,'0')}`;
-      return{ mIdx:i+1, ym, s:mtdSum(ym,dayCutoff) };
-    }).filter(m=>m.ym<=realYM); // まだ来ていない月は表示しない
-    const maxMTD=Math.max(...mtdMonths.map(m=>m.s),1);
-    const mtdRows=mtdMonths.map((m,idx)=>{
-      const pct=Math.round(m.s/maxMTD*100);
-      const prevVal=idx>0?mtdMonths[idx-1].s:null;
-      const diff=prevVal?Math.round((m.s-prevVal)/prevVal*100):null;
-      const diffStr=diff===null?'':(diff>0?`<span class="up">▲${diff}%</span>`:diff<0?`<span class="down">▼${Math.abs(diff)}%</span>`:`<span class="neu">→0%</span>`);
-      return `<div class="month-row"><div class="mr-left"><div class="mr-month">${m.mIdx}月（1〜${dayCutoff}日）</div><div class="bar-wrap" style="width:100%;margin-top:4px"><div class="bar-fill" style="width:${pct}%;background:var(--uber)"></div></div></div><div class="mr-right"><div class="mr-sales">¥${m.s.toLocaleString()}</div><div class="mr-diff">${diffStr}</div></div></div>`;
-    }).join('');
-
-    mtdBlock=`
-      <div class="section-title">${dayCutoff}日までの月別収入比較</div>
-      ${mtdRows}
-    `;
-  }catch(e){ console.error('同日まで比較の計算でエラー:',e); mtdBlock=''; }
+    const realYear=realNow.getFullYear(), realMonth=realNow.getMonth()+1, realDay=realNow.getDate();
+    if(String(realYear)===year){
+      const mtdSum=(ym,dayLimit)=>records.filter(r=>{
+        if(!r.date.startsWith(ym+'-')) return false;
+        const d=Number(r.date.split('-')[2]);
+        return d<=dayLimit;
+      }).reduce((s,r)=>s+totalOf(r),0);
+      const curYM=`${realYear}-${String(realMonth).padStart(2,'0')}`;
+      const prevD=new Date(realYear,realMonth-2,1);
+      const prevYM=`${prevD.getFullYear()}-${String(prevD.getMonth()+1).padStart(2,'0')}`;
+      const lastYearYM=`${realYear-1}-${String(realMonth).padStart(2,'0')}`;
+      const curMTD=mtdSum(curYM,realDay);
+      const prevMTD=mtdSum(prevYM,realDay);
+      const lyMTD=mtdSum(lastYearYM,realDay);
+      mtdBlock=`
+        <div class="section-title">今月の進捗（同日まで比較）</div>
+        <div class="stat2">
+          <div class="stat-card stat-card-full">
+            <div class="slabel">${realMonth}月1日〜${realDay}日の売上</div>
+            <div class="sval" style="font-size:22px">¥${curMTD.toLocaleString()}</div>
+            <div class="sdiff">${diffHtml(curMTD,prevMTD,'先月同日比')}${diffHtml(curMTD,lyMTD,'前年同日比')}</div>
+          </div>
+          <div class="stat-card"><div class="slabel">先月${realDay}日まで</div><div class="sval">¥${prevMTD.toLocaleString()}</div></div>
+          <div class="stat-card"><div class="slabel">前年${realMonth}月${realDay}日まで</div><div class="sval">¥${lyMTD.toLocaleString()}</div></div>
+        </div>
+      `;
+    }
+  }
 
   const months=Array.from({length:12},(_,i)=>{
     const mo=`${year}-${String(i+1).padStart(2,'0')}`;
@@ -2444,7 +2504,19 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('inp-distance').addEventListener('change',scheduleAutoSave);
   // 天候・メモが変わったら自動保存
   document.getElementById('inp-weather').addEventListener('change',scheduleAutoSave);
+  document.getElementById('inp-note').addEventListener('input',()=>setDirty(true));
   document.getElementById('inp-note').addEventListener('change',scheduleAutoSave);
+
+  window.addEventListener('online',()=>{
+    setSyncStatus(hasUnsavedChanges?'再接続・保存待ち':'オンライン','saved');
+    if(hasUnsavedChanges) saveRecord(true);
+  });
+  window.addEventListener('offline',()=>setSyncStatus('オフライン','offline'));
+  window.addEventListener('beforeunload',e=>{
+    if(!hasUnsavedChanges) return;
+    e.preventDefault();
+    e.returnValue='';
+  });
 
   fetchForecast();
   await loadTaxState();
