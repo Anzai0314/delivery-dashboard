@@ -553,7 +553,8 @@ function sessionsToHours(sess){
     if(!s.depart||!s.return) return;
     const[dh,dm]=s.depart.split(':').map(Number);
     const[rh,rm]=s.return.split(':').map(Number);
-    const diff=(rh*60+rm)-(dh*60+dm);
+    let diff=(rh*60+rm)-(dh*60+dm);
+    if(diff<0) diff+=24*60; // 日をまたぐ稼働（例: 23:00→翌1:30）に対応
     if(diff>0) mins+=diff;
   });
   return mins/60;
@@ -564,7 +565,8 @@ function hoursOf(r){
   if(!r.start||!r.end) return 0;
   const[sh,sm]=r.start.split(':').map(Number);
   const[eh,em]=r.end.split(':').map(Number);
-  const m=(eh*60+em)-(sh*60+sm);
+  let m=(eh*60+em)-(sh*60+sm);
+  if(m<0) m+=24*60; // 日をまたぐ稼働に対応
   return m>0?m/60:0;
 }
 
@@ -581,6 +583,14 @@ function nowTime(){
 
 function todayStr(){
   const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+// Uber等の「営業日」は深夜0:00〜3:59は前日の続きとして扱う。
+// 日付が変わった直後（AM4:00より前）にアプリを開いた場合、まだ「前日の稼働中」とみなして
+// 入力欄のデフォルト日付や連続稼働日数の起点をずらすために使う。
+function getBusinessDateStr(base=new Date()){
+  const d=new Date(base);
+  if(d.getHours()<4) d.setDate(d.getDate()-1);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function getMonthStr(){
@@ -767,7 +777,8 @@ function calcCurrentHours(){
     const[dh,dm]=s.depart.split(':').map(Number);
     const retTime=s.return||nowTime();
     const[rh,rm]=retTime.split(':').map(Number);
-    const diff=(rh*60+rm)-(dh*60+dm);
+    let diff=(rh*60+rm)-(dh*60+dm);
+    if(diff<0) diff+=24*60; // 日をまたぐ稼働中に対応
     if(diff>0) mins+=diff;
   });
   return mins/60;
@@ -863,8 +874,10 @@ function loadEntryForDate(date){
 
 // ── Firebase ──────────────────────────────────
 function listenToDatabase(){
+  document.getElementById('sync-status').textContent='認証中...';
   onAuthStateChanged(auth, user=>{
     if(!user) return; // 未認証の間は何もしない（signInAnonymouslyの結果を待つ）
+    document.getElementById('sync-status').textContent='データ取得中...';
     attachFirestoreListeners();
   });
   signInAnonymously(auth).catch(err=>{
@@ -885,7 +898,6 @@ function attachFirestoreListeners(){
     // 稼働中セッションがある場合は入力欄の上書きをスキップ
     const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
     if(cur && !inSession){ loadEntryForDate(cur); }
-    fetchForecast();
     updateViews();
     document.getElementById('sync-status').textContent='同期完了 ✓';
   },()=>document.getElementById('sync-status').textContent='同期エラー');
@@ -1414,8 +1426,9 @@ function renderSummary(){
   const curExp=expenses[month]||0;
   const netProfit=curS-curExp;
   let streak=0;
+  const bizToday=new Date(getBusinessDateStr()+'T00:00:00');
   for(let i=0;;i++){
-    const d=new Date(); d.setDate(d.getDate()-i);
+    const d=new Date(bizToday); d.setDate(bizToday.getDate()-i);
     const ds=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     if(records.find(r=>r.date===ds&&totalOf(r)>0)) streak++;
     else break;
@@ -1791,8 +1804,8 @@ function startCountup(){
     const[dh,dm]=last.depart.split(':').map(Number);
     const now=new Date();
     const nowMins=now.getHours()*60+now.getMinutes();
-    const diff=nowMins-(dh*60+dm);
-    if(diff<0){ stopCountup(); return; }
+    let diff=nowMins-(dh*60+dm);
+    if(diff<0) diff+=24*60; // 日をまたいでも経過時間を数え続ける
     const h=Math.floor(diff/60), m=diff%60;
     el.textContent=`🚀 ${h>0?h+'h':''}${String(m).padStart(2,'0')}m 経過`;
     el.style.display='inline';
@@ -1803,7 +1816,8 @@ function startCountup(){
     const last=sessions[sessions.length-1];
     const[dh,dm]=last.depart.split(':').map(Number);
     const now=new Date(), nowMins=now.getHours()*60+now.getMinutes();
-    const diff=Math.max(0,nowMins-(dh*60+dm));
+    let diff=nowMins-(dh*60+dm);
+    if(diff<0) diff+=24*60; // 日をまたいでも経過時間を数え続ける
     const h=Math.floor(diff/60), m=diff%60;
     el.textContent=`🚀 ${h>0?h+'h':''}${String(m).padStart(2,'0')}m 経過`;
     el.style.display='inline';
@@ -2399,7 +2413,7 @@ function showToast(msg){
 
 // ── 初期化 ───────────────────────────────────
 document.addEventListener('DOMContentLoaded', async ()=>{
-  const today=todayStr();
+  const today=getBusinessDateStr();
   document.getElementById('inp-date').value=today;
   sessionDate=today;
 
