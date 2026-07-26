@@ -101,6 +101,11 @@ body{display:flex;flex-direction:column}
 .entry-hint{font-size:11px;color:var(--text2);text-align:center;padding:4px 0 10px;display:none}
 .entry-hint.show{display:block}
 .entry-hint.loaded{color:var(--uber)}
+.holiday-toggle{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius);background:var(--bg2);border:0.5px solid var(--border);margin-bottom:8px;cursor:pointer}
+.holiday-toggle input{width:17px;height:17px;flex-shrink:0}
+.holiday-toggle span{font-size:12px;color:var(--text2)}
+.holiday-toggle.active{background:rgba(74,144,217,0.1);border-color:#4A90D9}
+.holiday-toggle.active span{color:#4A90D9;font-weight:600}
 
 /* 合計報酬バナー */
 .daily-total-banner{border-radius:var(--radius-lg);padding:14px 16px;margin-bottom:14px;background:var(--bg2);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
@@ -205,6 +210,7 @@ body{display:flex;flex-direction:column}
 .cal-cell.today{border-color:var(--uber)}
 .cal-cell.has-data{background:var(--bg2)}
 .cal-cell.selected{border-color:var(--text);background:var(--bg3)}
+.cal-cell.holiday{background:rgba(74,144,217,0.12);border-color:rgba(74,144,217,0.4)}
 .cal-date{font-size:12px;font-weight:600}
 .cal-date.sun{color:#E91E63}.cal-date.sat{color:#4A90D9}
 .cal-sales{font-size:9px;font-weight:700;color:var(--uber);line-height:1.2;text-align:center}
@@ -319,6 +325,10 @@ body{display:flex;flex-direction:column}
         </select>
       </div>
     </div>
+    <label class="holiday-toggle" id="holiday-toggle-label">
+      <input type="checkbox" id="inp-holiday">
+      <span>🏖️ この日は計画的な休日にする（予測計算から除外されます）</span>
+    </label>
     <div class="entry-hint" id="entry-hint"></div>
 
     <!-- 合計報酬バナー -->
@@ -515,6 +525,7 @@ const auth = getAuth(app);
 let records  = [];
 let expenses = {};
 let goals    = {};
+let holidays = {}; // { 'YYYY-MM-DD': true } 計画的な休日
 let monthOffset = 0;
 let calOffset   = 0;
 let yearOffset  = 0;
@@ -870,6 +881,15 @@ function loadEntryForDate(date){
   }
   loadSessions(date);
   updateDailyTotal();
+  updateHolidayToggle(date);
+}
+
+function updateHolidayToggle(date){
+  const cb=document.getElementById('inp-holiday');
+  const label=document.getElementById('holiday-toggle-label');
+  if(!cb) return;
+  cb.checked=!!holidays[date];
+  label.classList.toggle('active',cb.checked);
 }
 
 // ── Firebase ──────────────────────────────────
@@ -912,6 +932,14 @@ function attachFirestoreListeners(){
   onSnapshot(collection(db,'monthly_goals'),snap=>{
     goals={};
     snap.forEach(d=>goals[d.id]=d.data().amount||0);
+    updateViews();
+  });
+
+  onSnapshot(collection(db,'holidays'),snap=>{
+    holidays={};
+    snap.forEach(d=>holidays[d.id]=true);
+    const cur=document.getElementById('inp-date').value;
+    if(cur) updateHolidayToggle(cur);
     updateViews();
   });
 }
@@ -992,6 +1020,19 @@ async function loadTaxState(){
   }catch(e){}
 }
 async function saveGoal(month,amount){try{await setDoc(doc(db,'monthly_goals',month),{amount:Number(amount)||0});}catch(e){}}
+
+async function toggleHoliday(date,isHoliday){
+  try{
+    if(isHoliday){
+      holidays[date]=true;
+      await setDoc(doc(db,'holidays',date),{holiday:true});
+    }else{
+      delete holidays[date];
+      await deleteDoc(doc(db,'holidays',date));
+    }
+    updateViews();
+  }catch(e){ showToast('休日設定の保存に失敗しました'); }
+}
 
 // ── CSV ───────────────────────────────────────
 function exportCSV(year){
@@ -1317,13 +1358,13 @@ function generateInsightReport({f, pf, curS, prevS, curC, prevC, active, avgDayS
 }
 
 // 目標達成ペースのメッセージ（月初は挽回可能、達成度合いに応じて段階的な文言＋きつねの表情を返す）
-function goalForecastMessage(goalAmt, curS, dailyAvg, totalDays, passed, goalPct){
+function goalForecastMessage(goalAmt, curS, dailyAvg, totalDays, passed, goalPct, remainWorkDays){
   if(goalPct>=100){
     return {tone:'good', pose:'success', html:'🎉 今月の目標を達成しました！お疲れさまでした'};
   }
 
   const remain = goalAmt - curS;
-  const remainDays = Math.max(totalDays - passed, 0);
+  const remainDays = Math.max(remainWorkDays!=null?remainWorkDays:(totalDays-passed), 0);
 
   if(remainDays<=0){
     return {tone:'warn', pose:'sad', html:`今月は目標まであと¥${Math.max(remain,0).toLocaleString()}届きませんでした。来月また頑張りましょう`};
@@ -1400,6 +1441,27 @@ function renderSummary(){
   const passed=today2.toISOString().slice(0,7)===month?today2.getDate():totalDays;
   const dailyAvg=curS/(passed||1);
 
+  // ── 月末予測報酬：曜日別平均を使って残り日数を積み上げ ──
+  // （土日と平日で稼ぎが違う人が多いため、単純な日平均より精度が上がる）
+  const dowHistAll=Array(7).fill(null).map(()=>({sales:0,days:0}));
+  records.filter(r=>totalOf(r)>0).forEach(r=>{
+    const dow=new Date(r.date+'T00:00:00').getDay();
+    dowHistAll[dow].sales+=totalOf(r);
+    dowHistAll[dow].days++;
+  });
+  const dowAvgAll=dowHistAll.map(d=>d.days?d.sales/d.days:0);
+  const validDowAvgs=dowAvgAll.filter(v=>v>0);
+  const overallDowAvg=validDowAvgs.length?validDowAvgs.reduce((a,b)=>a+b,0)/validDowAvgs.length:dailyAvg;
+  let estRemain=0;
+  let remainWorkDays=0;
+  for(let d=passed+1; d<=totalDays; d++){
+    const dateStr=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(holidays[dateStr]) continue; // 計画的な休日は予測から除外
+    const dow=new Date(y,m-1,d).getDay();
+    estRemain += dowAvgAll[dow]||overallDowAvg||dailyAvg;
+    remainWorkDays++;
+  }
+
   // ── 走行距離・1km単価・消費カロリー ──
   // kcalフィールドが保存されていればそれを使用、なければ距離から推計（後方互換）
   const METS=6.0, WEIGHT=80, AVG_SPEED=15;
@@ -1422,7 +1484,7 @@ function renderSummary(){
   const pacePct = prevPace>0 ? Math.round(paceDiff/prevPace*100) : null;
   // 先月の月末最終売上（先月全体）
   const prevMonthTotal = prevS;
-  const estPayout=Math.round(dailyAvg*totalDays);
+  const estPayout=Math.round(curS+estRemain);
   const curExp=expenses[month]||0;
   const netProfit=curS-curExp;
   let streak=0;
@@ -1511,14 +1573,14 @@ function renderSummary(){
     <div class="goal-section">
       <div class="goal-header"><span>${month.replace('-','年')}月の目標</span><span class="goal-pct">${goalAmt?goalPct+'%':'未設定'}</span></div>
       ${goalAmt?`<div class="goal-bar-bg"><div class="goal-bar-fill${goalPct>=100?' over':''}" style="width:${Math.min(goalPct,100)}%"></div></div><div class="goal-sub"><span>¥${curS.toLocaleString()} / ¥${goalAmt.toLocaleString()}</span><span>残り¥${Math.max(goalAmt-curS,0).toLocaleString()}</span></div>
-      ${renderFoxBubble(goalForecastMessage(goalAmt,curS,dailyAvg,totalDays,passed,goalPct))}`:'<div style="font-size:12px;color:var(--text2);margin-bottom:8px">目標金額を設定してください</div>'}
+      ${renderFoxBubble(goalForecastMessage(goalAmt,curS,dailyAvg,totalDays,passed,goalPct,remainWorkDays))}`:'<div style="font-size:12px;color:var(--text2);margin-bottom:8px">目標金額を設定してください</div>'}
       <div class="goal-input-row"><label>目標額</label><input type="number" id="inp-goal" value="${goalAmt||''}" placeholder="200000" inputmode="numeric"></div>
     </div>
     <div class="section-title">収支管理</div>
     <div class="stat2" style="margin-bottom:16px">
       <div class="stat-card stat-card-full"><div class="slabel">今月の経費</div><div class="expense-input-box"><span>¥</span><input type="number" id="inp-expense" value="${curExp||''}" placeholder="0" inputmode="numeric"></div></div>
       <div class="stat-card" style="background:${netProfit>=0?'rgba(6,193,103,0.1)':'rgba(233,30,99,0.1)'}"><div class="slabel">純利益</div><div class="sval ${netProfit>=0?'up':'down'}" id="val-netprofit">¥${netProfit.toLocaleString()}</div></div>
-      <div class="stat-card"><div class="slabel">月末予測報酬</div><div class="sval" style="color:#BA7517">¥${estPayout.toLocaleString()}</div><div class="sdiff neu">日平均¥${Math.round(dailyAvg).toLocaleString()}ペース</div></div>
+      <div class="stat-card"><div class="slabel">月末予測報酬</div><div class="sval" style="color:#BA7517">¥${estPayout.toLocaleString()}</div><div class="sdiff neu">曜日別平均で残り稼働${remainWorkDays}日を予測${(totalDays-passed-remainWorkDays)>0?`（休日${totalDays-passed-remainWorkDays}日を除く）`:''}</div></div>
     </div>
     <div class="section-title">月間サマリー</div>
     <div class="stat2">
@@ -1637,11 +1699,12 @@ function renderCal(){
     const dow=new Date(dateStr+'T00:00:00').getDay();
     const isToday=dateStr===today;
     const isSel=dateStr===calSelected;
+    const isHol=!!holidays[dateStr];
     const intensity=sales>0?Math.max(0.15,sales/maxSales):0;
-    const bg=sales>0?`rgba(6,193,103,${intensity*0.6})`:'';
-    html+=`<div class="cal-cell${sales>0?' has-data':''}${isToday?' today':''}${isSel?' selected':''}" data-date="${dateStr}" style="${bg?'background:'+bg:''}">
+    const bg=isHol?'':sales>0?`rgba(6,193,103,${intensity*0.6})`:'';
+    html+=`<div class="cal-cell${sales>0?' has-data':''}${isToday?' today':''}${isSel?' selected':''}${isHol?' holiday':''}" data-date="${dateStr}" style="${bg?'background:'+bg:''}">
       <span class="cal-date ${dow===0?'sun':dow===6?'sat':''}">${d}</span>
-      ${sales>0?`<span class="cal-sales">${sales>=10000?(sales/10000).toFixed(1)+'万':('¥'+sales.toLocaleString())}</span>`:''}
+      ${isHol?'<span class="cal-sales" style="color:#4A90D9">🏖️休</span>':sales>0?`<span class="cal-sales">${sales>=10000?(sales/10000).toFixed(1)+'万':('¥'+sales.toLocaleString())}</span>`:''}
     </div>`;
   }
   document.getElementById('cal-grid').innerHTML=html;
@@ -1661,7 +1724,23 @@ function renderCal(){
 function showCalDetail(date){
   const rec=records.find(r=>r.date===date);
   const detail=document.getElementById('cal-detail');
-  if(!rec||totalOf(rec)===0){ detail.classList.remove('show'); return; }
+  const isHol=!!holidays[date];
+  if(!rec||totalOf(rec)===0){
+    if(!isHol){ detail.classList.remove('show'); return; }
+    const dow=DAYS[new Date(date+'T00:00:00').getDay()];
+    detail.className='cal-detail show';
+    detail.innerHTML=`
+      <div class="cal-detail-title">${date.slice(5).replace('-','/')} 🏖️ ${dow}曜日</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">計画的な休日として記録されています。予測計算からも除外されます。</div>
+      <button class="date-btn" id="btn-cal-unset-holiday" style="width:100%">休日設定を解除する</button>
+    `;
+    document.getElementById('btn-cal-unset-holiday').addEventListener('click',()=>{
+      toggleHoliday(date,false);
+      if(document.getElementById('inp-date').value===date) updateHolidayToggle(date);
+      showCalDetail(date);
+    });
+    return;
+  }
   const t=totalOf(rec),c=countOf(rec),u=c?Math.round(t/c):0,h=hoursOf(rec);
   const dow=DAYS[new Date(date+'T00:00:00').getDay()];
   const[y,m,d]=date.split('-').map(Number);
@@ -1673,7 +1752,7 @@ function showCalDetail(date){
   const sessHtml=(rec.sessions&&rec.sessions.length)?rec.sessions.map(s=>`<div style="font-size:12px;color:var(--text2)">${s.depart}→${s.return} (${fmtHours(sessionsToHours([s]))})</div>`).join(''):'';
   detail.className='cal-detail show';
   detail.innerHTML=`
-    <div class="cal-detail-title">${date.slice(5).replace('-','/')} ${wmapS[rec.weather]||'☀️'} ${dow}曜日</div>
+    <div class="cal-detail-title">${date.slice(5).replace('-','/')} ${wmapS[rec.weather]||'☀️'} ${dow}曜日${isHol?' <span style="color:#4A90D9;font-size:11px">🏖️休日設定あり</span>':''}</div>
     <div class="stat2">
       <div class="stat-card"><div class="slabel">合計売上</div><div class="sval up">¥${t.toLocaleString()}</div>${prevT!==null?`<div style="font-size:11px;margin-top:3px">先月同日 ${diffStr}</div>`:''}</div>
       <div class="stat-card"><div class="slabel">件数 / 単価</div><div class="sval">${c}件</div><div class="sdiff neu">¥${u.toLocaleString()}/件</div></div>
@@ -2448,6 +2527,13 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     renderFoodSearchResults(e.target.value);
   });
   document.getElementById('inp-date').addEventListener('change',e=>loadEntryForDate(e.target.value));
+  document.getElementById('inp-holiday').addEventListener('change',e=>{
+    const date=document.getElementById('inp-date').value;
+    if(!date) return;
+    document.getElementById('holiday-toggle-label').classList.toggle('active',e.target.checked);
+    toggleHoliday(date,e.target.checked);
+    showToast(e.target.checked?'休日として記録しました':'休日設定を解除しました');
+  });
 
   // 数値入力：inputでリアルタイム表示更新、changeで自動保存
   inputIds.forEach(id=>{
