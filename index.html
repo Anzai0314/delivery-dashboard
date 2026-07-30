@@ -1275,7 +1275,7 @@ function generateInsightReport({f, pf, curS, prevS, curC, prevC, active, avgDayS
     insights.push({
       type: salesDiff>=0?'positive':'negative', icon: salesDiff>=0?'📈':'📉',
       title:`先月比 売上${salesDiff>=0?'+':''}${salesPct}%`,
-      body:`売上は先月より¥${Math.abs(salesDiff).toLocaleString()}${salesDiff>=0?'増':'減'}（${curS.toLocaleString()}→${prevS.toLocaleString()}円ではなく${curS.toLocaleString()}円）。件数は${countDiff>=0?'+':''}${countDiff}件でした。`
+      body:`売上は先月より¥${Math.abs(salesDiff).toLocaleString()}${salesDiff>=0?'増':'減'}（今月¥${curS.toLocaleString()} / 先月¥${prevS.toLocaleString()}）。件数は${countDiff>=0?'+':''}${countDiff}件でした。`
     });
 
     // 稼働日数の変化
