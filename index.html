@@ -604,6 +604,10 @@ function getBusinessDateStr(base=new Date()){
   if(d.getHours()<4) d.setDate(d.getDate()-1);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+function getRealMonthStr(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
 function getMonthStr(){
   const d=new Date(); d.setMonth(d.getMonth()+monthOffset);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
@@ -1326,7 +1330,7 @@ function generateInsightReport({f, pf, curS, prevS, curC, prevC, active, avgDayS
 
   // 今月の稼働密度
   const today2=new Date();
-  const passed=today2.toISOString().slice(0,7)===month?today2.getDate():new Date(y,m,0).getDate();
+  const passed=getRealMonthStr()===month?today2.getDate():new Date(y,m,0).getDate();
   const workRate = Math.round(activeLen/passed*100);
   if(workRate<50 && passed>=10){
     insights.push({
@@ -1438,7 +1442,7 @@ function renderSummary(){
   const goalPct=goalAmt>0?Math.min(Math.round(curS/goalAmt*100),999):0;
   const totalDays=new Date(y,m,0).getDate();
   const today2=new Date();
-  const passed=today2.toISOString().slice(0,7)===month?today2.getDate():totalDays;
+  const passed=getRealMonthStr()===month?today2.getDate():totalDays;
   const dailyAvg=curS/(passed||1);
 
   // ── 月末予測報酬：曜日別平均を使って残り日数を積み上げ ──
@@ -1454,7 +1458,12 @@ function renderSummary(){
   const overallDowAvg=validDowAvgs.length?validDowAvgs.reduce((a,b)=>a+b,0)/validDowAvgs.length:dailyAvg;
   let estRemain=0;
   let remainWorkDays=0;
-  for(let d=passed+1; d<=totalDays; d++){
+  const isCurrentMonthView=getRealMonthStr()===month;
+  const todayDateStr=isCurrentMonthView?`${y}-${String(m).padStart(2,'0')}-${String(passed).padStart(2,'0')}`:null;
+  const todayHasData=todayDateStr?f.some(r=>r.date===todayDateStr&&totalOf(r)>0):true;
+  // 今日がまだ未入力（日付が変わったばかり等）なら、今日もまだ「これから稼げる日」として予測に含める
+  const loopStart=(isCurrentMonthView&&!todayHasData)?passed:passed+1;
+  for(let d=loopStart; d<=totalDays; d++){
     const dateStr=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     if(holidays[dateStr]) continue; // 計画的な休日は予測から除外
     const dow=new Date(y,m-1,d).getDay();
@@ -1475,7 +1484,7 @@ function renderSummary(){
     const estHrs = h>0?h:dist/AVG_SPEED;
     return s+Math.round(METS*WEIGHT*estHrs);
   }, 0);
-  const todayDay = today2.toISOString().slice(0,7)===month ? today2.getDate() : totalDays;
+  const todayDay = getRealMonthStr()===month ? today2.getDate() : totalDays;
   // 今月の todayDay 日まで（1〜todayDay）の売上合計
   const curPace = f.filter(r=>+r.date.slice(8)<=todayDay).reduce((s,r)=>s+totalOf(r),0);
   // 先月の同じ日まで（1〜todayDay）の売上合計
