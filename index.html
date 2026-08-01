@@ -609,11 +609,11 @@ function getRealMonthStr(){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 function getMonthStr(){
-  const d=new Date(); d.setMonth(d.getMonth()+monthOffset);
+  const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()+monthOffset); // 日を1日に固定してから月をずらす（月末日だと月をまたいで飛んでしまうため）
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 function getCalMonthStr(){
-  const d=new Date(); d.setMonth(d.getMonth()+calOffset);
+  const d=new Date(); d.setDate(1); d.setMonth(d.getMonth()+calOffset); // 同上
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 function getYearStr(){ return String(new Date().getFullYear()+yearOffset); }
@@ -2500,7 +2500,10 @@ function showToast(msg){
 }
 
 // ── 初期化 ───────────────────────────────────
+let appInitialized=false;
 document.addEventListener('DOMContentLoaded', async ()=>{
+  if(appInitialized) return; // 万一DOMContentLoadedが二重発火してもイベント登録を二重にしない
+  appInitialized=true;
   const today=getBusinessDateStr();
   document.getElementById('inp-date').value=today;
   sessionDate=today;
@@ -2508,14 +2511,24 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('btn-save').addEventListener('click',()=>saveRecord(false));
   document.getElementById('btn-depart').addEventListener('click',onDepart);
   document.getElementById('btn-return').addEventListener('click',onReturn);
-  document.getElementById('btn-prev-month').addEventListener('click',()=>{monthOffset--;renderSummary();});
-  document.getElementById('btn-next-month').addEventListener('click',()=>{monthOffset++;renderSummary();});
-  document.getElementById('btn-cal-prev').addEventListener('click',()=>{calOffset--;renderCal();});
-  document.getElementById('btn-cal-next').addEventListener('click',()=>{calOffset++;renderCal();});
-  document.getElementById('btn-prev-year').addEventListener('click',()=>{yearOffset--;renderYear();});
-  document.getElementById('btn-next-year').addEventListener('click',()=>{yearOffset++;renderYear();});
-  document.getElementById('btn-prev-week').addEventListener('click',()=>{weekOffset--;renderWeek();});
-  document.getElementById('btn-next-week').addEventListener('click',()=>{weekOffset++;renderWeek();});
+  // 連打・二重発火対策：同じボタンが短時間に2回発火しても1回分しか処理しない
+  function debounceClick(el, handler, delay=300){
+    let last=0;
+    el.addEventListener('click',(e)=>{
+      const now=Date.now();
+      if(now-last<delay) return;
+      last=now;
+      handler(e);
+    });
+  }
+  debounceClick(document.getElementById('btn-prev-month'),()=>{monthOffset--;renderSummary();});
+  debounceClick(document.getElementById('btn-next-month'),()=>{monthOffset++;renderSummary();});
+  debounceClick(document.getElementById('btn-cal-prev'),()=>{calOffset--;renderCal();});
+  debounceClick(document.getElementById('btn-cal-next'),()=>{calOffset++;renderCal();});
+  debounceClick(document.getElementById('btn-prev-year'),()=>{yearOffset--;renderYear();});
+  debounceClick(document.getElementById('btn-next-year'),()=>{yearOffset++;renderYear();});
+  debounceClick(document.getElementById('btn-prev-week'),()=>{weekOffset--;renderWeek();});
+  debounceClick(document.getElementById('btn-next-week'),()=>{weekOffset++;renderWeek();});
   document.getElementById('btn-prev-day').addEventListener('click',()=>changeDay(-1));
   document.getElementById('btn-next-day').addEventListener('click',()=>changeDay(1));
   document.getElementById('nav-entry').addEventListener('click',()=>showPage('entry'));
