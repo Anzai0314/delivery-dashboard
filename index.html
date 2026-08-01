@@ -1460,10 +1460,18 @@ function renderSummary(){
   let remainWorkDays=0;
   const isCurrentMonthView=getRealMonthStr()===month;
   const todayDateStr=isCurrentMonthView?`${y}-${String(m).padStart(2,'0')}-${String(passed).padStart(2,'0')}`:null;
-  const todayHasData=todayDateStr?f.some(r=>r.date===todayDateStr&&totalOf(r)>0):true;
-  // 今日がまだ未入力（日付が変わったばかり等）なら、今日もまだ「これから稼げる日」として予測に含める
-  const loopStart=(isCurrentMonthView&&!todayHasData)?passed:passed+1;
-  for(let d=loopStart; d<=totalDays; d++){
+  const todayIsHoliday=todayDateStr?!!holidays[todayDateStr]:false;
+  // 今日はまだ「終わっていない」前提で扱う：何か1件でも入力された時点で今日を計算から除外するのではなく、
+  // 「今日の曜日の平均額」と「今日すでに入力済みの実績」の差分だけを、まだ稼げる伸びしろとして積み上す。
+  // すでに平均を超えている日は伸びしろ0（マイナスにはしない）。
+  if(isCurrentMonthView && todayDateStr && !todayIsHoliday){
+    const todayActual=f.filter(r=>r.date===todayDateStr).reduce((s,r)=>s+totalOf(r),0);
+    const todayDow=new Date(y,m-1,passed).getDay();
+    const todayExpected=dowAvgAll[todayDow]||overallDowAvg||dailyAvg;
+    estRemain += Math.max(0, todayExpected-todayActual);
+    remainWorkDays++; // 今日もまだ「残り日数」の1日として数える
+  }
+  for(let d=passed+1; d<=totalDays; d++){
     const dateStr=`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     if(holidays[dateStr]) continue; // 計画的な休日は予測から除外
     const dow=new Date(y,m-1,d).getDay();
