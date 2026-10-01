@@ -1,0 +1,25 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 移行先: ログイン中ユーザー本人の領域だけを読み書き可能にする。
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // 旧Web版の共有コレクションは移行中だけ読み取りを許可する。
+    // 書き込みと削除は禁止し、元データを必ず残す。
+    match /{legacyCollection}/{document=**} {
+      allow read: if request.auth != null
+                  && legacyCollection in [
+                    'delivery_records',
+                    'monthly_expenses',
+                    'monthly_goals',
+                    'holidays',
+                    'tax_settings',
+                    'meal_records'
+                  ];
+      allow write: if false;
+    }
+  }
+}
