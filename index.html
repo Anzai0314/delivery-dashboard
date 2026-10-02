@@ -4,11 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="配達記録">
+<meta name="theme-color" content="#141412">
 <title>配達記録</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.10.0/dist/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  // 初回は目に優しいダーク表示。切り替え後はこの端末の選択を保持する。
+  (()=>{
+    let theme='dark';
+    try{ theme=localStorage.getItem('delivery-theme-v1')||'dark'; }catch(e){}
+    document.documentElement.dataset.theme=theme==='light'?'light':'dark';
+  })();
+</script>
 <style>
 :root{
   --bg:#ffffff;--bg2:#f5f5f4;--bg3:#eeede9;
@@ -17,20 +26,32 @@
   --radius:8px;--radius-lg:12px;
   --uber:#06C167;--demae:#FF6B00;--rocket:#E91E63;
   --up:#06C167;--down:#E91E63;
+  color-scheme:light;
 }
-@media(prefers-color-scheme:dark){
-  :root{--bg:#1c1c1a;--bg2:#262624;--bg3:#2e2e2c;--text:#f0efeb;--text2:#9a9a96;--text3:#6b6b67;--border:rgba(255,255,255,0.12);--border2:rgba(255,255,255,0.22);}
+html[data-theme="dark"]{
+  --bg:#181816;--bg2:#232321;--bg3:#2d2d2a;
+  --text:#f2f1ed;--text2:#b3b2ad;--text3:#85847f;
+  --border:rgba(255,255,255,0.13);--border2:rgba(255,255,255,0.24);
+  color-scheme:dark;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,'Hiragino Sans','Noto Sans JP',sans-serif;font-size:14px}
 body{display:flex;flex-direction:column}
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:0.5px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:max(12px,env(safe-area-inset-top)) 16px 8px;background:var(--bg);z-index:10}
 .topbar-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:6px}
 .sync-status{font-size:11px;color:var(--text3)}
-.account-chip{display:flex;align-items:center;gap:5px;max-width:58%;padding:6px 8px;border:0.5px solid var(--border);border-radius:999px;background:var(--bg2);color:var(--text);cursor:pointer;font:inherit}
+.utility-bar{display:flex;align-items:center;gap:8px;padding:4px 12px 10px;border-bottom:0.5px solid var(--border);background:var(--bg);z-index:10}
+.account-chip{display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:42px;flex:1;padding:8px 10px;border:0.5px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);cursor:pointer;font:inherit}
 .account-chip .sync-status{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .account-chip.account-ready{border-color:rgba(6,193,103,.45);background:rgba(6,193,103,.08)}
-.main{flex:1;overflow-y:auto;padding-bottom:70px}
+.utility-btn{width:44px;height:42px;flex:0 0 44px;border:0.5px solid var(--border);border-radius:10px;background:var(--bg2);color:var(--text);font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.utility-btn:active,.account-chip:active{background:var(--bg3)}
+.utility-btn.refreshing i{animation:refresh-spin .8s linear infinite}
+@keyframes refresh-spin{to{transform:rotate(360deg)}}
+.main{flex:1;min-height:0;overflow-y:auto;padding-bottom:70px;overscroll-behavior-y:contain}
+.pull-refresh{height:0;opacity:0;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:7px;color:var(--text2);font-size:11px;transition:height .18s ease,opacity .18s ease}
+.pull-refresh.visible{opacity:1}
+.pull-refresh.refreshing i{animation:refresh-spin .8s linear infinite}
 .page{display:none;padding:16px}
 .page.active{display:block}
 .bottom-nav{display:flex;border-top:0.5px solid var(--border);background:var(--bg);padding:6px 0 max(2px,env(safe-area-inset-bottom));position:fixed;bottom:0;left:0;right:0}
@@ -340,12 +361,23 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 <div class="topbar">
   <span class="topbar-title"><i class="ti ti-motorbike"></i> 配達記録</span>
+</div>
+<div class="utility-bar" aria-label="表示・同期操作">
   <button class="account-chip" id="btn-account" type="button" aria-haspopup="dialog" aria-controls="account-modal">
     <i class="ti ti-cloud"></i><span class="sync-status" id="sync-status">接続中...</span>
   </button>
+  <button class="utility-btn" id="btn-theme" type="button" aria-label="明るい表示に切り替える" title="表示を切り替える">
+    <i class="ti ti-sun"></i>
+  </button>
+  <button class="utility-btn" id="btn-refresh" type="button" aria-label="データと稼働時間を更新" title="更新">
+    <i class="ti ti-refresh"></i>
+  </button>
 </div>
 
-<div class="main">
+<div class="main" id="main-scroll">
+  <div class="pull-refresh" id="pull-refresh" aria-live="polite">
+    <i class="ti ti-arrow-down"></i><span>下に引いて更新</span>
+  </div>
 
   <!-- ① 入力ページ -->
   <div id="page-entry" class="page active">
@@ -685,6 +717,24 @@ function nonNegativeNumber(value){
   return Number.isFinite(n)?Math.max(0,n):0;
 }
 
+function applyTheme(theme){
+  const next=theme==='light'?'light':'dark';
+  document.documentElement.dataset.theme=next;
+  try{ localStorage.setItem('delivery-theme-v1',next); }catch(e){}
+  const button=document.getElementById('btn-theme');
+  if(button){
+    const isDark=next==='dark';
+    button.innerHTML=`<i class="ti ti-${isDark?'sun':'moon'}"></i>`;
+    button.setAttribute('aria-label',isDark?'明るい表示に切り替える':'ダーク表示に切り替える');
+  }
+  const themeMeta=document.querySelector('meta[name="theme-color"]');
+  if(themeMeta) themeMeta.content=next==='dark'?'#181816':'#ffffff';
+}
+
+function toggleTheme(){
+  applyTheme(document.documentElement.dataset.theme==='dark'?'light':'dark');
+}
+
 function sessionsToHours(sess){
   let mins=0;
   sess.forEach(s=>{
@@ -710,7 +760,9 @@ function hoursOf(r){
 
 function fmtHours(h){
   if(!h) return '';
-  const hh=Math.floor(h), mm=Math.round((h-hh)*60);
+  const roundedMinutes=Math.round(h*60);
+  if(roundedMinutes<1) return '<1m';
+  const hh=Math.floor(roundedMinutes/60), mm=roundedMinutes%60;
   return mm>0?`${hh}h${mm}m`:`${hh}h`;
 }
 
@@ -807,7 +859,13 @@ function renderSessions(){
   const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
   returnBtn.className=inSession?'btn-return active-session':'btn-return';
 
-  if(!sessions.length){ list.innerHTML=''; totalRow.style.display='none'; updateTotalHoursDisp(); return; }
+  if(!sessions.length){
+    list.innerHTML='';
+    totalRow.style.display='none';
+    stopCountup();
+    updateTotalHoursDisp();
+    return;
+  }
 
   list.innerHTML=sessions.map((s,i)=>{
     const dur=s.return?fmtHours(sessionsToHours([s])):'稼働中...';
@@ -879,7 +937,7 @@ function renderSessions(){
     });
   });
 
-  const totalH=sessionsToHours(sessions);
+  const totalH=calcCurrentHours();
   if(totalH>0){
     totalRow.style.display='flex';
     document.getElementById('total-hours-val').textContent=fmtHours(totalH);
@@ -888,10 +946,12 @@ function renderSessions(){
   }
   updateTotalHoursDisp();
   updateDailyTotal();
+  if(inSession) startCountup();
+  else stopCountup();
 }
 
 function updateTotalHoursDisp(){
-  const h=sessionsToHours(sessions);
+  const h=calcCurrentHours();
   document.getElementById('total-hours-disp').textContent=h>0?fmtHours(h):'';
 }
 
@@ -1158,17 +1218,24 @@ function clearHomeGeofence(){
 
 // ── 合計バナー更新 ────────────────────────────
 function calcCurrentHours(){
-  let mins=0;
+  let seconds=0;
   sessions.forEach(s=>{
     if(!s.depart) return;
     const[dh,dm]=s.depart.split(':').map(Number);
-    const retTime=s.return||nowTime();
-    const[rh,rm]=retTime.split(':').map(Number);
-    let diff=(rh*60+rm)-(dh*60+dm);
-    if(diff<0) diff+=24*60; // 日をまたぐ稼働中に対応
-    if(diff>0) mins+=diff;
+    const departSeconds=dh*3600+dm*60;
+    let returnSeconds;
+    if(s.return){
+      const[rh,rm]=s.return.split(':').map(Number);
+      returnSeconds=rh*3600+rm*60;
+    }else{
+      const now=new Date();
+      returnSeconds=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
+    }
+    let diff=returnSeconds-departSeconds;
+    if(diff<0) diff+=24*3600; // 日をまたぐ稼働中に対応
+    if(diff>0) seconds+=diff;
   });
-  return mins/60;
+  return seconds/3600;
 }
 
 function updateDailyTotal(){
@@ -1630,10 +1697,142 @@ async function processNativeEvents(){
   }
 }
 
-window.onNativeTrackingStateChanged=()=>{
+window.onNativeTrackingStateChanged=async()=>{
   renderGeofenceControls();
-  processNativeEvents();
+  await processNativeEvents();
+  if(sessions.length>0&&!sessions[sessions.length-1].return) startCountup();
+  else updateDailyTotal();
 };
+
+let refreshBusy=false;
+function resetPullRefresh(){
+  const indicator=document.getElementById('pull-refresh');
+  if(!indicator) return;
+  indicator.style.height='0px';
+  indicator.classList.remove('visible','refreshing');
+  const icon=indicator.querySelector('i');
+  const label=indicator.querySelector('span');
+  if(icon) icon.className='ti ti-arrow-down';
+  if(label) label.textContent='下に引いて更新';
+}
+
+function setRefreshVisual(active,showPull=false){
+  const button=document.getElementById('btn-refresh');
+  button?.classList.toggle('refreshing',active);
+  if(button) button.disabled=active;
+  const indicator=document.getElementById('pull-refresh');
+  if(!indicator) return;
+  if(active&&showPull){
+    indicator.style.height='42px';
+    indicator.classList.add('visible','refreshing');
+    const icon=indicator.querySelector('i');
+    const label=indicator.querySelector('span');
+    if(icon) icon.className='ti ti-refresh';
+    if(label) label.textContent='更新中…';
+  }
+}
+
+async function refreshDashboard({notify=true,showPull=false}={}){
+  if(refreshBusy) return;
+  if(!currentUser){
+    if(notify) showToast('認証の完了後に更新できます');
+    return;
+  }
+  refreshBusy=true;
+  setRefreshVisual(true,showPull);
+  document.getElementById('sync-status').textContent='更新中...';
+  try{
+    // 入力直後の未送信データを先に保存してから、端末の走行イベントとクラウドを読み直す。
+    if(autoSaveTimer){
+      cancelAutoSave();
+      await saveRecord(true);
+    }
+    await processNativeEvents();
+    const [recordSnap,expenseSnap,goalSnap,holidaySnap]=await Promise.all([
+      getDocs(userCollection('delivery_records')),
+      getDocs(userCollection('monthly_expenses')),
+      getDocs(userCollection('monthly_goals')),
+      getDocs(userCollection('holidays'))
+    ]);
+    await fetchForecast();
+
+    records=recordSnap.docs
+      .filter(item=>/^\d{4}-\d{2}-\d{2}$/.test(item.id))
+      .map(item=>normalizeRecord(item.id,item.data()))
+      .sort((a,b)=>a.date.localeCompare(b.date));
+    expenses={};
+    expenseSnap.forEach(item=>{ if(/^\d{4}-\d{2}$/.test(item.id)) expenses[item.id]=nonNegativeNumber(item.data().amount); });
+    goals={};
+    goalSnap.forEach(item=>{ if(/^\d{4}-\d{2}$/.test(item.id)) goals[item.id]=nonNegativeNumber(item.data().amount); });
+    holidays={};
+    holidaySnap.forEach(item=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(item.id)&&item.data().holiday===true) holidays[item.id]=true; });
+
+    const cur=document.getElementById('inp-date').value;
+    if(cur) loadEntryForDate(cur);
+    updateViews();
+    renderGeofenceControls();
+    document.getElementById('sync-status').textContent='同期完了 ✓';
+    if(notify) showToast('最新データと稼働時間に更新しました');
+  }catch(error){
+    console.error('手動更新に失敗:',error);
+    document.getElementById('sync-status').textContent='更新エラー';
+    if(notify) showToast('更新できませんでした。通信状態を確認してください');
+    if(sessions.length>0&&!sessions[sessions.length-1].return) startCountup();
+  }finally{
+    refreshBusy=false;
+    setRefreshVisual(false);
+    setTimeout(resetPullRefresh,260);
+  }
+}
+
+function setupPullToRefresh(){
+  const main=document.getElementById('main-scroll');
+  const indicator=document.getElementById('pull-refresh');
+  if(!main||!indicator) return;
+  let startY=null;
+  let pullDistance=0;
+  const threshold=78;
+
+  main.addEventListener('touchstart',event=>{
+    if(refreshBusy||main.scrollTop>0||event.touches.length!==1){ startY=null; return; }
+    startY=event.touches[0].clientY;
+    pullDistance=0;
+  },{passive:true});
+
+  main.addEventListener('touchmove',event=>{
+    if(startY===null||refreshBusy||event.touches.length!==1) return;
+    const dy=event.touches[0].clientY-startY;
+    if(dy<=0||main.scrollTop>0){
+      pullDistance=0;
+      resetPullRefresh();
+      return;
+    }
+    pullDistance=Math.min(dy,120);
+    indicator.style.height=`${Math.min(48,pullDistance*.55)}px`;
+    indicator.classList.add('visible');
+    const icon=indicator.querySelector('i');
+    const label=indicator.querySelector('span');
+    if(pullDistance>=threshold){
+      if(icon) icon.className='ti ti-refresh';
+      if(label) label.textContent='離すと更新';
+    }else{
+      if(icon) icon.className='ti ti-arrow-down';
+      if(label) label.textContent='下に引いて更新';
+    }
+    event.preventDefault();
+  },{passive:false});
+
+  const finishPull=()=>{
+    if(startY===null) return;
+    const shouldRefresh=pullDistance>=threshold;
+    startY=null;
+    pullDistance=0;
+    if(shouldRefresh) refreshDashboard({notify:true,showPull:true});
+    else resetPullRefresh();
+  };
+  main.addEventListener('touchend',finishPull,{passive:true});
+  main.addEventListener('touchcancel',finishPull,{passive:true});
+}
 
 let listenersAttached=false;
 function attachFirestoreListeners(){
@@ -1646,9 +1845,14 @@ function attachFirestoreListeners(){
     });
     records.sort((a,b)=>a.date.localeCompare(b.date));
     const cur=document.getElementById('inp-date').value;
-    // 稼働中セッションがある場合は入力欄の上書きをスキップ
+    // 未保存の稼働開始は守りつつ、別端末やネイティブ側で帰宅した更新は反映する。
     const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
-    if(cur && !inSession){ loadEntryForDate(cur); }
+    const localLast=inSession?sessions[sessions.length-1]:null;
+    const remoteSessions=records.find(record=>record.date===cur)?.sessions||[];
+    const remoteLast=remoteSessions[remoteSessions.length-1];
+    const activeClosedRemotely=!!(localLast&&remoteLast&&remoteLast.depart===localLast.depart&&remoteLast.return);
+    if(cur&&(!inSession||activeClosedRemotely)) loadEntryForDate(cur);
+    else if(inSession) startCountup();
     updateViews();
     document.getElementById('sync-status').textContent='同期完了 ✓';
   },()=>document.getElementById('sync-status').textContent='同期エラー');
@@ -2503,6 +2707,24 @@ function renderSummary(){
 
 // ── カレンダーページ ──────────────────────────
 let calSelected = null;
+
+function openEntryFromCalendar(date){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date||'')) return;
+  const dateInput=document.getElementById('inp-date');
+  const activeSession=sessions.length>0&&!sessions[sessions.length-1].return;
+  if(activeSession&&dateInput.value!==date){
+    showToast('稼働中は別の日付へ移動できません');
+    return;
+  }
+  dateInput.value=date;
+  loadEntryForDate(date);
+  calSelected=null;
+  showPage('entry');
+  document.querySelector('.main')?.scrollTo({top:0,behavior:'smooth'});
+  const[,month,day]=date.split('-');
+  showToast(`${Number(month)}月${Number(day)}日を開きました`);
+}
+
 function renderCal(){
   const month=getCalMonthStr();
   document.getElementById('cal-label').textContent=month.replace('-','年')+'月';
@@ -2539,7 +2761,7 @@ function renderCal(){
     const isHol=!!holidays[dateStr];
     const intensity=sales>0?Math.max(0.15,sales/maxSales):0;
     const bg=isHol?'':sales>0?`rgba(6,193,103,${intensity*0.6})`:'';
-    html+=`<button type="button" class="cal-cell${sales>0?' has-data':''}${isToday?' today':''}${isSel?' selected':''}${isHol?' holiday':''}" data-date="${dateStr}" aria-label="${m}月${d}日${sales>0?' 売上'+sales+'円':''}${isHol?' 休日':''}" style="${bg?'background:'+bg:''}">
+    html+=`<button type="button" class="cal-cell${sales>0?' has-data':''}${isToday?' today':''}${isSel?' selected':''}${isHol?' holiday':''}" data-date="${dateStr}" aria-label="${m}月${d}日${sales>0?' 売上'+sales+'円':''}${isHol?' 休日':''} 入力画面を開く" style="${bg?'background:'+bg:''}">
       <span class="cal-date ${dow===0?'sun':dow===6?'sat':''}">${d}</span>
       ${isHol?'<span class="cal-sales" style="color:#4A90D9">🏖️休</span>':sales>0?`<span class="cal-sales">${sales>=10000?(sales/10000).toFixed(1)+'万':('¥'+sales.toLocaleString())}</span>`:''}
     </button>`;
@@ -2547,12 +2769,7 @@ function renderCal(){
   document.getElementById('cal-grid').innerHTML=html;
 
   document.querySelectorAll('.cal-cell').forEach(cell=>{
-    cell.addEventListener('click',()=>{
-      const date=cell.dataset.date;
-      if(calSelected===date){ calSelected=null; document.getElementById('cal-detail').classList.remove('show'); }
-      else { calSelected=date; showCalDetail(date); }
-      renderCal();
-    });
+    cell.addEventListener('click',()=>openEntryFromCalendar(cell.dataset.date));
   });
 
   if(calSelected) showCalDetail(calSelected);
@@ -2709,35 +2926,34 @@ function renderYear(){
 }
 
 // ── カウントアップタイマー ────────────────────
-function startCountup(){
-  stopCountup();
+function updateLiveTimeDisplay(){
   const el=document.getElementById('countup-timer');
-  if(!el) return;
-  countupInterval=setInterval(()=>{
-    const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
-    if(!inSession){ stopCountup(); return; }
-    const last=sessions[sessions.length-1];
-    const[dh,dm]=last.depart.split(':').map(Number);
-    const now=new Date();
-    const nowMins=now.getHours()*60+now.getMinutes();
-    let diff=nowMins-(dh*60+dm);
-    if(diff<0) diff+=24*60; // 日をまたいでも経過時間を数え続ける
-    const h=Math.floor(diff/60), m=diff%60;
-    el.textContent=`🚀 ${h>0?h+'h':''}${String(m).padStart(2,'0')}m 経過`;
-    el.style.display='inline';
-  }, 10000); // 10秒ごとに更新
-  // 即時実行
   const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
-  if(inSession){
-    const last=sessions[sessions.length-1];
-    const[dh,dm]=last.depart.split(':').map(Number);
-    const now=new Date(), nowMins=now.getHours()*60+now.getMinutes();
-    let diff=nowMins-(dh*60+dm);
-    if(diff<0) diff+=24*60; // 日をまたいでも経過時間を数え続ける
-    const h=Math.floor(diff/60), m=diff%60;
-    el.textContent=`🚀 ${h>0?h+'h':''}${String(m).padStart(2,'0')}m 経過`;
-    el.style.display='inline';
+  if(!el||!inSession){
+    if(el) el.style.display='none';
+    return false;
   }
+  const last=sessions[sessions.length-1];
+  const[dh,dm]=last.depart.split(':').map(Number);
+  const now=new Date();
+  const nowSeconds=now.getHours()*3600+now.getMinutes()*60+now.getSeconds();
+  let diff=nowSeconds-(dh*3600+dm*60);
+  if(diff<0) diff+=24*3600; // 日をまたいでも経過時間を数え続ける
+  const h=Math.floor(diff/3600), m=Math.floor((diff%3600)/60), s=diff%60;
+  el.textContent=`🚀 ${h>0?h+'h':''}${String(m).padStart(2,'0')}m${String(s).padStart(2,'0')}s`;
+  el.style.display='inline';
+  updateTotalHoursDisp();
+  updateDailyTotal();
+  return true;
+}
+
+function startCountup(){
+  clearInterval(countupInterval);
+  countupInterval=null;
+  if(!updateLiveTimeDisplay()) return;
+  countupInterval=setInterval(()=>{
+    if(!updateLiveTimeDisplay()) stopCountup();
+  },1000);
 }
 function stopCountup(){
   clearInterval(countupInterval);
@@ -3458,6 +3674,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('inp-note').addEventListener('change',scheduleAutoSave);
 
   document.getElementById('btn-account').addEventListener('click',openAccountDialog);
+  document.getElementById('btn-theme').addEventListener('click',toggleTheme);
+  document.getElementById('btn-refresh').addEventListener('click',()=>refreshDashboard());
   document.getElementById('btn-account-close').addEventListener('click',closeAccountDialog);
   document.getElementById('btn-account-upgrade').addEventListener('click',upgradeAnonymousAccount);
   document.getElementById('btn-account-login').addEventListener('click',loginSharedAccount);
@@ -3468,6 +3686,17 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   });
   document.addEventListener('keydown',event=>{
     if(event.key==='Escape'&&!document.getElementById('account-modal').hidden) closeAccountDialog();
+  });
+
+  applyTheme(document.documentElement.dataset.theme);
+  setupPullToRefresh();
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden) return;
+    if(sessions.length>0&&!sessions[sessions.length-1].return) startCountup();
+    else updateDailyTotal();
+  });
+  window.addEventListener('pageshow',()=>{
+    if(sessions.length>0&&!sessions[sessions.length-1].return) startCountup();
   });
 
   loadHomeGeofence();
