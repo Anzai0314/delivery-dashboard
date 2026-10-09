@@ -88,8 +88,13 @@ body{display:flex;flex-direction:column}
 .geo-toggle{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:var(--radius);background:var(--bg);border:0.5px solid var(--border);margin-bottom:8px;cursor:pointer}
 .geo-toggle input{width:18px;height:18px;flex-shrink:0}
 .geo-toggle span{font-size:12px}
+.geo-toggle.today-toggle{border-color:rgba(6,193,103,.45)}
+.geo-toggle.today-toggle.armed{background:rgba(6,193,103,.10);border-color:var(--uber)}
+.geo-toggle.today-toggle.armed span{color:var(--uber);font-weight:700}
 .geo-distance{font-size:12px;font-weight:700;color:var(--uber);margin-bottom:5px;min-height:18px}
 .geo-note{font-size:10px;color:var(--text3);line-height:1.55}
+.diagnostic-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.diagnostic-log{margin-top:8px;max-height:240px;overflow:auto;white-space:pre-wrap;word-break:break-word;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius);padding:9px;font-size:10px;line-height:1.5;color:var(--text2);user-select:text}
 .session-list{display:flex;flex-direction:column;gap:5px}
 .session-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border-radius:var(--radius);padding:7px 10px;font-size:12px}
 .session-row .sr-time{color:var(--text2)}
@@ -461,12 +466,21 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
         <button class="geo-btn" id="btn-set-home" type="button"><i class="ti ti-current-location"></i> 現在地を自宅に設定</button>
         <button class="geo-btn danger" id="btn-clear-home" type="button" disabled><i class="ti ti-trash"></i> 自宅位置を削除</button>
       </div>
+      <label class="geo-toggle today-toggle" id="today-auto-label" for="inp-today-armed">
+        <input type="checkbox" id="inp-today-armed" disabled>
+        <span>今日は配達する（午前4時に自動OFF）</span>
+      </label>
       <label class="geo-toggle" for="inp-auto-geofence">
         <input type="checkbox" id="inp-auto-geofence" disabled>
-        <span>自宅から100m超で自動出発、100m以内で自動帰宅</span>
+        <span>100mオート稼働機能を使用する</span>
       </label>
       <div class="geo-distance" id="geo-distance" aria-live="polite"></div>
       <div class="geo-note" id="geo-note">自宅座標はこのブラウザ内だけに保存します。位置精度50m以内の測位を2回連続で確認してから切り替えます。Web版のため、アプリを閉じた状態やOSがバックグラウンド測位を停止した状態では動作しません。</div>
+      <div class="diagnostic-actions" id="native-diagnostic-actions" hidden>
+        <button class="geo-btn" id="btn-native-log" type="button"><i class="ti ti-file-description"></i> 診断ログ</button>
+        <button class="geo-btn" id="btn-copy-native-log" type="button" disabled><i class="ti ti-copy"></i> ログをコピー</button>
+      </div>
+      <pre class="diagnostic-log" id="native-diagnostic-log" hidden></pre>
     </div>
     <div class="plat-block">
       <div class="plat-header"><div class="plat-dot" style="background:var(--uber)"></div>Uber Eats</div>
@@ -632,7 +646,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, getDoc, getDocs, onSnapshot, runTransaction } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getAuth, signInAnonymously, onAuthStateChanged, EmailAuthProvider, linkWithCredential, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -960,6 +974,10 @@ async function onDepart(source='manual'){
   if(date!==sessionDate) loadSessions(date);
   const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
   if(inSession){ if(source==='manual') showToast('帰宅を先に記録してください'); return false; }
+  if(source==='manual'&&holidays[date]){
+    await toggleHoliday(date,false,true);
+    updateHolidayToggle(date);
+  }
   let nativeTripId='';
   if(source==='manual'&&NATIVE_ANDROID){
     nativeTripId=window.AndroidBridge.startManualTrip();
@@ -1022,7 +1040,12 @@ function loadHomeGeofence(){
     if(state?.homeSet&&!homeGeofence) homeGeofence={native:true};
     geofenceWatchId=state?.autoEnabled?'native':null;
     const note=document.getElementById('geo-note');
-    if(note) note.textContent='自宅座標と走行軌跡は端末内だけで処理します。稼働中は通知を表示してGPS距離を計測し、完了後は合計距離だけを記録します。';
+    if(note) note.textContent='「今日は配達する」をONにした日だけ自動稼働します。帰宅イベントはGPSで再確認してから確定します。異常時は下の診断ログを確認できます。';
+    const diagnosticActions=document.getElementById('native-diagnostic-actions');
+    if(diagnosticActions) diagnosticActions.hidden=false;
+  }else{
+    const todayLabel=document.getElementById('today-auto-label');
+    if(todayLabel) todayLabel.hidden=true;
   }
   renderGeofenceControls();
 }
@@ -1033,32 +1056,136 @@ function getNativeTrackingState(){
   catch(e){ return null; }
 }
 
+function toggleNativeDiagnostics(){
+  if(!NATIVE_ANDROID) return;
+  const panel=document.getElementById('native-diagnostic-log');
+  const button=document.getElementById('btn-native-log');
+  const copyButton=document.getElementById('btn-copy-native-log');
+  if(!panel||!button||!copyButton) return;
+  if(!panel.hidden){
+    panel.hidden=true;
+    button.innerHTML='<i class="ti ti-file-description"></i> 診断ログ';
+    copyButton.disabled=true;
+    return;
+  }
+  try{
+    panel.textContent=window.AndroidBridge.getDiagnosticLogText()||'ログはまだありません';
+  }catch(error){
+    panel.textContent=`診断ログを取得できません: ${error?.message||'不明なエラー'}`;
+  }
+  panel.hidden=false;
+  button.innerHTML='<i class="ti ti-chevron-up"></i> ログを閉じる';
+  copyButton.disabled=false;
+}
+
+async function copyNativeDiagnostics(){
+  const text=document.getElementById('native-diagnostic-log')?.textContent||'';
+  if(!text) return;
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('診断ログをコピーしました');
+  }catch(error){
+    const area=document.createElement('textarea');
+    area.value=text;
+    area.style.position='fixed';
+    area.style.opacity='0';
+    document.body.appendChild(area);
+    area.select();
+    const copied=document.execCommand('copy');
+    area.remove();
+    showToast(copied?'診断ログをコピーしました':'ログを長押ししてコピーしてください');
+  }
+}
+
+function recordNativeDiagnostic(type,error){
+  if(!NATIVE_ANDROID) return;
+  const detail=String(error?.code||error?.message||error||'unknown').slice(0,500);
+  try{ window.AndroidBridge.recordDiagnostic(type,detail); }
+  catch(ignored){}
+}
+
 function renderGeofenceControls(message=''){
   const status=document.getElementById('geo-status');
   const toggle=document.getElementById('inp-auto-geofence');
+  const todayToggle=document.getElementById('inp-today-armed');
+  const todayLabel=document.getElementById('today-auto-label');
   const clearBtn=document.getElementById('btn-clear-home');
-  if(!status||!toggle||!clearBtn) return;
+  if(!status||!toggle||!todayToggle||!clearBtn) return;
   const nativeState=getNativeTrackingState();
   const hasHome=NATIVE_ANDROID?!!nativeState?.homeSet:!!homeGeofence;
+  const autoEnabled=NATIVE_ANDROID?!!nativeState?.autoEnabled:geofenceWatchId!==null;
+  const armedToday=NATIVE_ANDROID?!!nativeState?.armedToday:autoEnabled;
+  const holidayToday=!!holidays[getBusinessDateStr()];
   if(NATIVE_ANDROID&&hasHome&&!homeGeofence) homeGeofence={native:true};
   toggle.disabled=!hasHome;
+  todayToggle.disabled=!NATIVE_ANDROID||!hasHome||!autoEnabled||holidayToday;
+  todayToggle.checked=armedToday&&!holidayToday;
+  todayLabel?.classList.toggle('armed',todayToggle.checked);
   clearBtn.disabled=!hasHome;
-  toggle.checked=NATIVE_ANDROID?!!nativeState?.autoEnabled:(!!homeGeofence&&geofenceWatchId!==null);
+  toggle.checked=NATIVE_ANDROID?autoEnabled:(!!homeGeofence&&geofenceWatchId!==null);
   if(NATIVE_ANDROID){
-    geofenceWatchId=nativeState?.autoEnabled?'native':null;
+    geofenceWatchId=autoEnabled&&armedToday?'native':null;
     const distance=document.getElementById('geo-distance');
     if(nativeState?.tracking){
-      distance.textContent=`走行距離 約${nonNegativeNumber(nativeState.distanceKm).toFixed(2)}km を計測中`;
-    }else if(nativeState?.autoEnabled&&!message){
-      distance.textContent='バックグラウンドで自宅100mの出入りを待機中';
+      const km=nonNegativeNumber(nativeState.distanceKm).toFixed(2);
+      const gpsStatus=nativeState.gpsStatus||'waiting';
+      if(gpsStatus==='poor_accuracy'){
+        const accuracy=nonNegativeNumber(nativeState.gpsAccuracy);
+        distance.textContent=`GPS精度不足（±${Math.round(accuracy)}m）・現在 ${km}km`;
+      }else if(gpsStatus==='reconnecting'||gpsStatus==='request_error'){
+        distance.textContent=`GPSを自動再接続中・現在 ${km}km`;
+      }else if(gpsStatus==='permission_error'){
+        distance.textContent='正確な位置情報の許可を確認してください';
+      }else if(gpsStatus==='home_check'){
+        distance.textContent=`帰宅位置をGPSで確認中・現在 ${km}km`;
+      }else if(gpsStatus==='waiting'||gpsStatus==='starting'){
+        distance.textContent=`GPS取得待ち・現在 ${km}km`;
+      }else{
+        distance.textContent=`走行距離 約${km}km を計測中`;
+      }
+    }else if(autoEnabled&&armedToday&&!message){
+      distance.textContent='本日の100m自動判定を待機中';
+    }else if(autoEnabled&&!armedToday&&!message){
+      distance.textContent=holidayToday?'本日は休日のため自動稼働しません':'配達する日に上のスイッチをONにしてください';
+    }else if(!message){
+      distance.textContent='';
     }
   }
   if(message) status.textContent=message;
   else if(!hasHome) status.textContent='自宅位置が未設定です';
   else if(NATIVE_ANDROID&&nativeState?.pendingEnable) status.textContent='権限の設定待ち';
+  else if(NATIVE_ANDROID&&nativeState?.tracking&&(nativeState.gpsStatus==='reconnecting'||nativeState.gpsStatus==='request_error')) status.textContent='稼働中・GPS再接続中';
+  else if(NATIVE_ANDROID&&nativeState?.tracking&&nativeState.gpsStatus==='poor_accuracy') status.textContent='稼働中・GPS精度不足';
+  else if(NATIVE_ANDROID&&nativeState?.tracking&&nativeState.gpsStatus==='home_check') status.textContent='稼働中・帰宅位置を確認中';
   else if(NATIVE_ANDROID&&nativeState?.tracking) status.textContent='稼働中・距離計測中';
+  else if(NATIVE_ANDROID&&autoEnabled&&!armedToday) status.textContent=holidayToday?'本日は休日':'本日は休止';
   else if(geofenceWatchId!==null) status.textContent='自動判定中';
+  else if(NATIVE_ANDROID&&autoEnabled) status.textContent='機能ON・本日は休止';
   else status.textContent='自宅位置を設定済み';
+}
+
+function setTodayArmed(enabled){
+  if(!NATIVE_ANDROID) return;
+  const checkbox=document.getElementById('inp-today-armed');
+  if(enabled&&holidays[getBusinessDateStr()]){
+    checkbox.checked=false;
+    renderGeofenceControls('休日設定を解除してからONにしてください');
+    showToast('本日は休日に設定されています');
+    return;
+  }
+  const result=window.AndroidBridge.setTodayArmed(enabled);
+  if(result==='enabled') showToast('本日の自動稼働をONにしました');
+  else if(result==='disabled') showToast('本日の自動稼働をOFFにしました');
+  else if(result==='auto-required') showToast('先に100mオート稼働機能をONにしてください');
+  else if(result==='fine-permission-required'||result==='background-permission-required') showToast('位置情報の許可を確認してください');
+  renderGeofenceControls();
+}
+
+function syncNativeHolidayArm(){
+  if(!NATIVE_ANDROID||!holidays[getBusinessDateStr()]) return;
+  const state=getNativeTrackingState();
+  if(state?.armedToday) window.AndroidBridge.setTodayArmed(false);
+  renderGeofenceControls();
 }
 
 function getCurrentPosition(options){
@@ -1130,8 +1257,9 @@ function startGeofenceWatch(){
     localStorage.setItem(HOME_GEOFENCE_ENABLED_KEY,'true');
     const result=window.AndroidBridge.setAutoEnabled(true);
     if(result==='enabled'){
-      geofenceWatchId='native';
-      renderGeofenceControls('自動判定中');
+      const state=getNativeTrackingState();
+      geofenceWatchId=state?.armedToday?'native':null;
+      renderGeofenceControls();
     }else if(result==='fine-permission-required'||result==='background-permission-required'){
       renderGeofenceControls('位置情報の許可を設定してください');
     }else{
@@ -1366,9 +1494,21 @@ function normalizeRecord(date,data={}){
     sessions:normalizedSessions,
     nativeTripIds:Array.isArray(data.nativeTripIds)?data.nativeTripIds.filter(id=>typeof id==='string'&&id.length<=100).slice(-100):[],
     distance:nonNegativeNumber(data.distance),
+    nativeRevision:Math.floor(nonNegativeNumber(data.nativeRevision)),
     kcal:nonNegativeNumber(data.kcal),
     note:typeof data.note==='string'?data.note.slice(0,2000):''
   };
+}
+
+function protectNewerNativeRecord(localRecord,remoteRecord){
+  const payload={...localRecord};
+  if(remoteRecord.nativeRevision>Math.floor(nonNegativeNumber(localRecord.nativeRevision))){
+    payload.sessions=remoteRecord.sessions;
+    payload.distance=remoteRecord.distance;
+    payload.nativeTripIds=remoteRecord.nativeTripIds;
+    payload.nativeRevision=remoteRecord.nativeRevision;
+  }
+  return payload;
 }
 
 const ACCOUNT_COLLECTIONS=['delivery_records','monthly_expenses','monthly_goals','holidays','tax_settings','meal_records'];
@@ -1652,20 +1792,24 @@ async function processNativeEvents(){
       const date=typeof event?.date==='string'?event.date:'';
       if(!eventId||!tripId||!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
 
+      if(event.type!=='depart'&&event.type!=='complete') continue;
       const ref=userDoc('delivery_records',date);
-      const snap=await getDoc(ref);
-      const rec=normalizeRecord(date,snap.exists()?snap.data():{});
-      const daySessions=JSON.parse(JSON.stringify(rec.sessions));
-      const completedIds=[...rec.nativeTripIds];
-      let index=daySessions.findIndex(session=>session.nativeTripId===tripId);
-      const depart=/^\d{2}:\d{2}$/.test(event.depart||'')?event.depart:nowTime();
-
-      if(event.type==='depart'){
-        if(index<0){
-          daySessions.push({depart,return:null,source:'geofence',nativeTripId:tripId});
+      await runTransaction(db,async transaction=>{
+        const snap=await transaction.get(ref);
+        const rec=normalizeRecord(date,snap.exists()?snap.data():{});
+        const daySessions=JSON.parse(JSON.stringify(rec.sessions));
+        const completedIds=[...rec.nativeTripIds];
+        let index=daySessions.findIndex(session=>session.nativeTripId===tripId);
+        const depart=/^\d{2}:\d{2}$/.test(event.depart||'')?event.depart:nowTime();
+        if(event.type==='depart'){
+          if(index<0) daySessions.push({depart,return:null,source:'geofence',nativeTripId:tripId});
+          transaction.set(ref,{
+            sessions:daySessions,
+            nativeRevision:rec.nativeRevision+1,
+            updatedAt:new Date().toISOString()
+          },{merge:true});
+          return;
         }
-        await setDoc(ref,{sessions:daySessions,updatedAt:new Date().toISOString()},{merge:true});
-      }else if(event.type==='complete'){
         if(index<0){
           daySessions.push({depart,return:null,source:event.source==='manual'?'manual':'geofence',nativeTripId:tripId});
           index=daySessions.length-1;
@@ -1677,19 +1821,19 @@ async function processNativeEvents(){
           distance+=nonNegativeNumber(event.distanceKm);
           completedIds.push(tripId);
         }
-        await setDoc(ref,{
+        transaction.set(ref,{
           sessions:daySessions,
           distance,
           nativeTripIds:completedIds.slice(-100),
+          nativeRevision:rec.nativeRevision+1,
           updatedAt:new Date().toISOString()
         },{merge:true});
-      }else{
-        continue;
-      }
+      });
       window.AndroidBridge.acknowledgeEvent(eventId);
     }
   }catch(error){
     console.error('ネイティブ走行データの同期エラー:',error);
+    recordNativeDiagnostic('native_sync_error',error);
     document.getElementById('sync-status').textContent='走行データ同期エラー';
   }finally{
     nativeEventsBusy=false;
@@ -1766,6 +1910,7 @@ async function refreshDashboard({notify=true,showPull=false}={}){
     goalSnap.forEach(item=>{ if(/^\d{4}-\d{2}$/.test(item.id)) goals[item.id]=nonNegativeNumber(item.data().amount); });
     holidays={};
     holidaySnap.forEach(item=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(item.id)&&item.data().holiday===true) holidays[item.id]=true; });
+    syncNativeHolidayArm();
 
     const cur=document.getElementById('inp-date').value;
     if(cur) loadEntryForDate(cur);
@@ -1875,6 +2020,7 @@ function attachFirestoreListeners(){
     snap.forEach(d=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(d.id)&&d.data().holiday===true) holidays[d.id]=true; });
     const cur=document.getElementById('inp-date').value;
     if(cur) updateHolidayToggle(cur);
+    syncNativeHolidayArm();
     updateViews();
   });
 }
@@ -1933,6 +2079,7 @@ function buildRecordPayload(){
     rocket:{sales:nonNegativeNumber(document.getElementById('rocket-s').value),count:nonNegativeNumber(document.getElementById('rocket-c').value)},
     sessions: JSON.parse(JSON.stringify(sessions.filter(s=>s.depart))),
     nativeTripIds:Array.isArray(existing?.nativeTripIds)?existing.nativeTripIds.slice(-100):[],
+    nativeRevision:Math.floor(nonNegativeNumber(existing?.nativeRevision)),
     distance: nonNegativeNumber(document.getElementById('inp-distance').value),
     kcal: nonNegativeNumber(todayKcal),
     note: String(document.getElementById('inp-note').value||'').slice(0,2000),
@@ -1957,7 +2104,14 @@ async function saveRecord(silent=false,prepared=null){
   const rec=prepared?.rec||buildRecordPayload();
   try{
     document.getElementById('sync-status').textContent='保存中...';
-    await setDoc(userDoc('delivery_records',date),rec);
+    const ref=userDoc('delivery_records',date);
+    await runTransaction(db,async transaction=>{
+      const snap=await transaction.get(ref);
+      const remote=normalizeRecord(date,snap.exists()?snap.data():{});
+      // ネイティブ帰宅の直後に古い自動保存が到着しても、走行記録を巻き戻さない。
+      const payload=protectNewerNativeRecord(rec,remote);
+      transaction.set(ref,payload);
+    });
     document.getElementById('sync-status').textContent='同期完了 ✓';
     if(document.getElementById('inp-date').value===date){
       const hint=document.getElementById('entry-hint');
@@ -1968,6 +2122,7 @@ async function saveRecord(silent=false,prepared=null){
     if(!silent) showToast('保存しました ✓');
   }catch(e){
     console.error('配達記録の保存に失敗:',e);
+    recordNativeDiagnostic('record_save_error',e);
     document.getElementById('sync-status').textContent='保存エラー';
     showToast(silent?'自動保存に失敗しました':'保存に失敗しました');
   }
@@ -2029,17 +2184,19 @@ async function saveExpense(month,amount){
   }
 }
 
-async function toggleHoliday(date,isHoliday){
+async function toggleHoliday(date,isHoliday,silent=false){
   try{
     if(isHoliday){
       holidays[date]=true;
       await setDoc(userDoc('holidays',date),{holiday:true,updatedAt:new Date().toISOString()});
+      if(NATIVE_ANDROID&&date===getBusinessDateStr()) window.AndroidBridge.setTodayArmed(false);
     }else{
       delete holidays[date];
       await deleteDoc(userDoc('holidays',date));
     }
+    renderGeofenceControls();
     updateViews();
-    showToast(isHoliday?'休日として記録しました':'休日設定を解除しました');
+    if(!silent) showToast(isHoliday?'休日として記録しました':'休日設定を解除しました');
   }catch(e){ showToast('休日設定の保存に失敗しました'); }
 }
 
@@ -3617,6 +3774,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
     if(e.target.checked) startGeofenceWatch();
     else stopGeofenceWatch();
   });
+  document.getElementById('inp-today-armed').addEventListener('change',e=>setTodayArmed(e.target.checked));
+  document.getElementById('btn-native-log').addEventListener('click',toggleNativeDiagnostics);
+  document.getElementById('btn-copy-native-log').addEventListener('click',copyNativeDiagnostics);
   // 連打・二重発火対策：同じボタンが短時間に2回発火しても1回分しか処理しない
   function debounceClick(el, handler, delay=300){
     let last=0;
@@ -3698,6 +3858,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   window.addEventListener('pageshow',()=>{
     if(sessions.length>0&&!sessions[sessions.length-1].return) startCountup();
   });
+  if(NATIVE_ANDROID) setInterval(renderGeofenceControls,60_000);
 
   loadHomeGeofence();
   fetchForecast();
