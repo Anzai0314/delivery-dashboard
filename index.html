@@ -677,6 +677,7 @@ let chartInstances = {};
 // sessions = [ {depart:"HH:MM", return:"HH:MM"|null}, ... ]
 let sessions = [];
 let sessionDate = '';
+let sessionNativeRevision = 0;
 let todayKcal = 0;
 
 // 自宅ジオフェンス。正確な自宅座標はクラウドへ保存せず、このブラウザ内だけに保持する。
@@ -862,7 +863,12 @@ function loadSessions(date){
   sessionDate=date;
   const ex=records.find(r=>r.date===date);
   sessions = ex && ex.sessions ? JSON.parse(JSON.stringify(ex.sessions)) : [];
+  sessionNativeRevision=Math.floor(nonNegativeNumber(ex?.nativeRevision));
   renderSessions();
+}
+
+function shouldAcceptRemoteSessions(inSession,activeClosedRemotely,remoteRevision,localRevision){
+  return !inSession||activeClosedRemotely||remoteRevision>localRevision;
 }
 
 function renderSessions(){
@@ -1810,6 +1816,12 @@ async function processNativeEvents(){
           },{merge:true});
           return;
         }
+        // 以前の画面保存でnativeTripIdだけ欠けた場合は、同じ出発時刻の
+        // 未完了セッションへ完了イベントを結び直す。
+        if(index<0){
+          index=daySessions.findIndex(session=>session.depart===depart&&!session.return);
+          if(index>=0) daySessions[index].nativeTripId=tripId;
+        }
         if(index<0){
           daySessions.push({depart,return:null,source:event.source==='manual'?'manual':'geofence',nativeTripId:tripId});
           index=daySessions.length-1;
@@ -1993,10 +2005,12 @@ function attachFirestoreListeners(){
     // 未保存の稼働開始は守りつつ、別端末やネイティブ側で帰宅した更新は反映する。
     const inSession=sessions.length>0&&!sessions[sessions.length-1].return;
     const localLast=inSession?sessions[sessions.length-1]:null;
-    const remoteSessions=records.find(record=>record.date===cur)?.sessions||[];
+    const remoteRecord=records.find(record=>record.date===cur);
+    const remoteSessions=remoteRecord?.sessions||[];
     const remoteLast=remoteSessions[remoteSessions.length-1];
     const activeClosedRemotely=!!(localLast&&remoteLast&&remoteLast.depart===localLast.depart&&remoteLast.return);
-    if(cur&&(!inSession||activeClosedRemotely)) loadEntryForDate(cur);
+    const remoteRevision=Math.floor(nonNegativeNumber(remoteRecord?.nativeRevision));
+    if(cur&&shouldAcceptRemoteSessions(inSession,activeClosedRemotely,remoteRevision,sessionNativeRevision)) loadEntryForDate(cur);
     else if(inSession) startCountup();
     updateViews();
     document.getElementById('sync-status').textContent='同期完了 ✓';
