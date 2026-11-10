@@ -567,7 +567,26 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div id="tax-content"></div>
   </div>
 
-  <!-- ⑦ 食事記録ページ -->
+  <div id="page-stores" class="page">
+    <div class="section-title">店舗別の訪問回数</div>
+    <p style="color:var(--text2);font-size:12px">実際に受取完了した記録を集計します。同じチェーンでも支店ごとに別集計です。現在は受取完了を手動で確認して記録します。</p>
+    <div class="field"><label for="store-month">集計月（空欄なら全期間）</label><input type="month" id="store-month"></div>
+    <div class="field"><label for="store-platform-filter">サービス</label><select id="store-platform-filter"><option value="">すべて</option><option value="demae">出前館</option><option value="uber">Uber</option><option value="rocket">ロケットナウ</option></select></div>
+    <div id="store-sync-status" role="status">店舗記録を読み込み中…</div>
+    <div class="section-title" style="margin-top:16px">オファーと操作（自動検出・試験中）</div>
+    <p style="font-size:12px;color:var(--text2)">出前館・Uber・ロケットナウのオファー画面と操作イベントを集計します。ダブルもオファー1回です。承諾・受託・即時マッチング操作は成立を保証しません。イベントが取得できない操作は数えられません。同額・同距離の連続オファーを区別できない場合があります。</p>
+    <div id="offer-stats"></div><div id="offer-history"></div>
+    <div class="section-title" style="margin-top:16px">訪問ランキング</div><div id="store-ranking"></div>
+    <div class="section-title" style="margin-top:20px">受取完了を記録</div>
+    <div class="field"><label for="store-name">店舗名（支店名まで）</label><input id="store-name" maxlength="200" placeholder="例：吉野家 仙台河原町店"></div>
+    <div class="field"><label for="store-address">店舗住所・施設名（任意）</label><input id="store-address" maxlength="300"></div>
+    <div class="field"><label for="store-platform">サービス</label><select id="store-platform"><option value="demae">出前館</option><option value="uber">Uber</option><option value="rocket">ロケットナウ</option></select></div>
+    <div class="field"><label for="store-date">受取日</label><input type="date" id="store-date"></div>
+    <button class="date-btn" id="btn-store-add">訪問を1回記録</button>
+    <button class="date-btn" id="btn-store-native" hidden>最後に読み取った店舗を確認</button>
+    <div class="section-title" style="margin-top:20px">最近の訪問記録</div><div id="store-history"></div>
+  </div>
+  <!-- 過去の食事データは保持。ナビゲーションからは除外。 -->
   <div id="page-meal" class="page">
     <div class="date-input-wrap" style="margin-bottom:14px">
       <button class="date-btn" id="btn-meal-prev-day"><i class="ti ti-chevron-left"></i>前日</button>
@@ -606,7 +625,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   <button class="nav-item" id="nav-cal"><i class="ti ti-calendar"></i>暦</button>
   <button class="nav-item" id="nav-year"><i class="ti ti-calendar-stats"></i>年間</button>
   <button class="nav-item" id="nav-tax"><i class="ti ti-receipt-tax"></i>申告</button>
-  <button class="nav-item" id="nav-meal"><i class="ti ti-soup"></i>食事</button>
+  <button class="nav-item" id="nav-stores"><i class="ti ti-building-store"></i>店舗</button>
 </div>
 
 <div class="account-modal" id="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-title" hidden>
@@ -1517,7 +1536,7 @@ function protectNewerNativeRecord(localRecord,remoteRecord){
   return payload;
 }
 
-const ACCOUNT_COLLECTIONS=['delivery_records','monthly_expenses','monthly_goals','holidays','tax_settings','meal_records'];
+const ACCOUNT_COLLECTIONS=['delivery_records','monthly_expenses','monthly_goals','holidays','tax_settings','meal_records','store_visits','offer_events'];
 let accountBusy=false;
 
 function setAccountMessage(message,type=''){
@@ -1769,6 +1788,7 @@ async function listenToDatabase(){
   document.getElementById('sync-status').textContent='認証中...';
   try{
     currentUser=await ensureAuthenticatedUser();
+    if(NATIVE_ANDROID && window.AndroidBridge.setStoreVisitOwner) window.AndroidBridge.setStoreVisitOwner(currentUser.uid);
     updateAccountUI();
     document.getElementById('sync-status').textContent='データ取得中...';
     await loadTaxState(new Date().getFullYear());
@@ -1784,6 +1804,9 @@ async function listenToDatabase(){
 
 let nativeEventsBusy=false;
 async function processNativeEvents(){
+  // 店舗同期が通信待ちでも、GPSイベント処理を妨げない。
+  syncStoreVisits();
+  syncOfferEvents();
   if(!NATIVE_ANDROID||!currentUser||nativeEventsBusy) return;
   nativeEventsBusy=true;
   try{
@@ -1995,6 +2018,13 @@ let listenersAttached=false;
 function attachFirestoreListeners(){
   if(listenersAttached) return; // onAuthStateChangedが複数回発火しても二重登録しない
   listenersAttached=true;
+  onSnapshot(userCollection('offer_events'),snap=>{
+    offerEvents=snap.docs.map(d=>({...d.data(),id:d.id})).filter(v=>['offer','reject','accept_slide','accept_action','matching_request'].includes(v.kind)&&/^\d{4}-\d{2}-\d{2}$/.test(v.date));renderOfferStats();
+  },()=>{document.getElementById('offer-stats').textContent='オファー記録の取得に失敗しました';});
+  onSnapshot(userCollection('store_visits'),snap=>{
+    storeVisits=snap.docs.map(d=>({...d.data(),id:d.id})).filter(v=>v.kind==='visit'&&typeof v.store==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(v.date));
+    document.getElementById('store-sync-status').textContent='店舗記録：同期完了';renderStores();
+  },()=>{document.getElementById('store-sync-status').textContent='店舗記録の取得に失敗しました';});
   onSnapshot(userCollection('delivery_records'),snap=>{
     records=[];
     snap.forEach(d=>{
@@ -2049,7 +2079,7 @@ function updateViews(){
 
 // ── ページ切替 ────────────────────────────────
 function showPage(p){
-  ['entry','summary','cal','year','week','tax','meal'].forEach(n=>{
+  ['entry','summary','cal','year','week','tax','stores','meal'].forEach(n=>{
     document.getElementById('page-'+n).classList.toggle('active',n===p);
     const nav=document.getElementById('nav-'+n);
     if(nav){
@@ -2064,6 +2094,7 @@ function showPage(p){
   if(p==='week')    renderWeek();
   if(p==='tax')     renderTax();
   if(p==='meal')    renderMealPage();
+  if(p==='stores') {renderStores();syncStoreVisits();}
 }
 
 // ── 前日・翌日 ────────────────────────────────
@@ -3595,6 +3626,76 @@ const FOOD_DB = [
   {name:'おにぎり（梅）',kcal:170,unit:'piece'},
 ];
 
+let storeVisits=[];
+let offerEvents=[],offerSyncBusy=false;
+function offerKindName(kind){return ({offer:'オファー検出',reject:'拒否操作検出',accept_slide:'スライド受託操作検出',accept_action:'承諾操作検出',matching_request:'即時マッチング申込操作'})[kind]||kind;}
+function renderOfferStats(){
+  const month=document.getElementById('store-month').value,platform=document.getElementById('store-platform-filter').value;
+  const events=offerEvents.filter(v=>(!month||v.date.startsWith(month))&&(!platform||v.platform===platform));
+  const counts=kind=>events.filter(v=>v.kind===kind).length;
+  const slides=events.filter(v=>v.kind==='accept_slide'||v.kind==='accept_action');
+  document.getElementById('offer-stats').innerHTML=`<p>オファー ${counts('offer')}回 / 拒否操作 ${counts('reject')}回 / 受託操作 ${slides.length}回</p><p style="font-size:12px">受託操作の内訳：シングル ${slides.filter(v=>Number(v.orderCount)===1).length}回 / 複数件 ${slides.filter(v=>Number(v.orderCount)>1).length}回</p>`;
+  document.getElementById('offer-history').innerHTML=events.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,20).map(v=>`<div class="meal-item"><div>${escapeHTML(offerKindName(v.kind))}<div style="font-size:11px;color:var(--text2)">${escapeHTML(v.date)} ${escapeHTML(v.store||'店舗未取得')} / ${escapeHTML(String(v.reward??''))}円</div></div><button class="date-btn" data-offer-delete="${escapeHTML(v.id)}">削除</button></div>`).join('');
+  const storeCounts=new Map();for(const v of slides){if(!v.store)continue;const name=cleanStoreName(v.store);storeCounts.set(name,(storeCounts.get(name)||0)+1);}
+  document.getElementById('offer-stats').innerHTML+='<div class="section-title">承諾・受託操作時の店舗</div>'+[...storeCounts].sort((a,b)=>b[1]-a[1]).map(([name,count])=>`<div class="meal-item"><span>${escapeHTML(name)}</span><strong>${count}回</strong></div>`).join('');
+  document.getElementById('offer-stats').innerHTML+=`<p>即時マッチング申込操作 ${counts('matching_request')}回（成立は未確認）</p>`;
+}
+async function syncOfferEvents(){
+  if(!NATIVE_ANDROID||!currentUser||offerSyncBusy||!window.AndroidBridge.getPendingOfferEventsJson)return;
+  offerSyncBusy=true;
+  try{for(const v of JSON.parse(window.AndroidBridge.getPendingOfferEventsJson()||'[]')){
+    if(v.owner!==currentUser.uid||!/^[-a-zA-Z0-9]{1,100}$/.test(v.id)||!/^\d{4}-\d{2}-\d{2}$/.test(v.date)||!['offer','reject','accept_slide','accept_action','matching_request'].includes(v.kind)||!['demae','uber','rocket'].includes(v.platform))continue;
+    await setDoc(userDoc('offer_events',v.id),{offerId:String(v.offerId||''),kind:v.kind,store:cleanStoreName(v.store),platform:v.platform,date:v.date,createdAt:String(v.createdAt||''),source:String(v.source||''),reward:nonNegativeNumber(v.reward),distanceKm:nonNegativeNumber(v.distanceKm),orderCount:Math.max(1,Math.floor(nonNegativeNumber(v.orderCount)))});
+    window.AndroidBridge.acknowledgeOfferEvent(v.id);
+  }}catch(error){document.getElementById('offer-stats').textContent='オファー記録が未同期です。通信復帰後に再試行します';}finally{offerSyncBusy=false;}
+}
+let storeSyncBusy=false;
+function storePlatformName(value){return ({demae:'出前館',uber:'Uber',rocket:'ロケットナウ'})[value]||'不明';}
+function cleanStoreName(value){return String(value||'').normalize('NFKC').replace(/\s+/g,' ').trim().slice(0,200);}
+function renderStores(){
+  renderOfferStats();
+  const month=document.getElementById('store-month').value, platform=document.getElementById('store-platform-filter').value;
+  const visits=storeVisits.filter(v=>(!month||v.date.startsWith(month))&&(!platform||v.platform===platform));
+  const groups=new Map();
+  for(const v of visits){const name=cleanStoreName(v.store);const address=cleanStoreName(v.address);const key=name;if(!groups.has(key))groups.set(key,{name,address,count:0});const group=groups.get(key);group.count++;if(!group.address&&address)group.address=address;}
+  const ranked=[...groups.values()].sort((a,b)=>b.count-a.count||a.name.localeCompare(b.name,'ja'));
+  document.getElementById('store-ranking').innerHTML=`<p>訪問 ${visits.length}回 / ${ranked.length}店舗</p>`+ranked.map((g,i)=>`<div class="meal-item"><div>${i+1}. ${escapeHTML(g.name)}<div style="font-size:11px;color:var(--text2)">${escapeHTML(g.address)}</div></div><strong>${g.count}回</strong></div>`).join('');
+  document.getElementById('store-history').innerHTML=visits.slice().sort((a,b)=>b.date.localeCompare(a.date)||String(b.createdAt||'').localeCompare(String(a.createdAt||''))).slice(0,100).map(v=>`<div class="meal-item"><div>${escapeHTML(v.store)}<div style="font-size:11px;color:var(--text2)">${escapeHTML(v.date)} / ${escapeHTML(storePlatformName(v.platform))}</div></div><button class="date-btn" data-visit-delete="${escapeHTML(v.id)}">削除</button></div>`).join('')||'<p>訪問記録はまだありません</p>';
+}
+async function syncStoreVisits(){
+  if(!NATIVE_ANDROID||!currentUser||storeSyncBusy||!window.AndroidBridge.getPendingStoreVisitsJson)return;
+  storeSyncBusy=true;
+  try{
+    const pending=JSON.parse(window.AndroidBridge.getPendingStoreVisitsJson()||'[]');
+    for(const v of pending){
+      if(v.owner!==currentUser.uid||!/^[-a-zA-Z0-9]{1,100}$/.test(v.id)||!/^\d{4}-\d{2}-\d{2}$/.test(v.date)||!cleanStoreName(v.store))continue;
+      await setDoc(userDoc('store_visits',v.id),{store:cleanStoreName(v.store),address:String(v.address||'').slice(0,300),platform:['uber','rocket'].includes(v.platform)?v.platform:'demae',kind:'visit',date:v.date,createdAt:String(v.createdAt||''),source:'manual-receipt-confirmation'});
+      window.AndroidBridge.acknowledgeStoreVisit(v.id);
+    }
+  }catch(e){document.getElementById('store-sync-status').textContent='店舗記録が未同期です。通信復帰後に再試行します';}
+  finally{storeSyncBusy=false;}
+}
+function setupStores(){
+  document.getElementById('store-month').value=todayStr().slice(0,7);
+  document.getElementById('store-date').value=todayStr();
+  for(const id of ['store-month','store-platform-filter'])document.getElementById(id).addEventListener('change',renderStores);
+  const nativeButton=document.getElementById('btn-store-native');nativeButton.hidden=!NATIVE_ANDROID;
+  nativeButton.addEventListener('click',()=>window.AndroidBridge.openOfferAssistant());
+  document.getElementById('btn-store-add').addEventListener('click',async e=>{
+    const store=cleanStoreName(document.getElementById('store-name').value),date=document.getElementById('store-date').value;
+    if(!store||!/^\d{4}-\d{2}-\d{2}$/.test(date)||!currentUser){showToast('店舗名・日付・ログイン状態を確認してください');return;}
+    const button=e.currentTarget;button.disabled=true;
+    try{await setDoc(userDoc('store_visits',crypto.randomUUID()),{store,address:document.getElementById('store-address').value.trim().slice(0,300),platform:document.getElementById('store-platform').value,date,kind:'visit',source:'manual',createdAt:new Date().toISOString()});showToast('訪問を1回記録しました');}
+    catch(error){showToast('店舗記録を保存できませんでした');}finally{button.disabled=false;}
+  });
+  document.getElementById('store-history').addEventListener('click',async e=>{
+    const button=e.target.closest('[data-visit-delete]');if(!button||!currentUser)return;
+    if(!confirm('この訪問記録を1件削除しますか？'))return;
+    button.disabled=true;try{await deleteDoc(userDoc('store_visits',button.dataset.visitDelete));}catch(error){button.disabled=false;showToast('削除できませんでした');}
+  });
+  document.getElementById('offer-history').addEventListener('click',async e=>{const button=e.target.closest('[data-offer-delete]');if(!button||!currentUser||!confirm('この検出記録を1件削除しますか？'))return;button.disabled=true;try{await deleteDoc(userDoc('offer_events',button.dataset.offerDelete));}catch(error){button.disabled=false;showToast('削除できませんでした');}});
+  if(NATIVE_ANDROID)setInterval(()=>{if(document.visibilityState==='visible'){syncStoreVisits();syncOfferEvents();}},10000);
+}
 let mealDate = todayStr();
 let mealRecords = []; // {date, foodName, kcal, qty, time}[]
 let mealSaveQueue = Promise.resolve();
@@ -3817,7 +3918,8 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   document.getElementById('nav-week').addEventListener('click',()=>showPage('week'));
   document.getElementById('nav-year').addEventListener('click',()=>showPage('year'));
   document.getElementById('nav-tax').addEventListener('click',()=>showPage('tax'));
-  document.getElementById('nav-meal').addEventListener('click',()=>showPage('meal'));
+  document.getElementById('nav-stores').addEventListener('click',()=>showPage('stores'));
+  setupStores();
   document.getElementById('btn-meal-prev-day').addEventListener('click',()=>changeMealDay(-1));
   document.getElementById('btn-meal-next-day').addEventListener('click',()=>changeMealDay(1));
   document.getElementById('meal-date').addEventListener('change', async e=>{
