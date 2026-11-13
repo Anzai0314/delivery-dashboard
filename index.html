@@ -575,7 +575,11 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
     <div id="store-sync-status" role="status">店舗記録を読み込み中…</div>
     <div class="section-title" style="margin-top:16px">オファーと操作（自動検出・試験中）</div>
     <p style="font-size:12px;color:var(--text2)">出前館・Uber・ロケットナウのオファー画面と操作イベントを集計します。ダブルもオファー1回です。承諾・受託・即時マッチング操作は成立を保証しません。イベントが取得できない操作は数えられません。同額・同距離の連続オファーを区別できない場合があります。</p>
-    <div id="offer-stats"></div><div id="offer-history"></div>
+    <div id="offer-stats"></div><div id="offer-breakdown"></div>
+    <div class="section-title">オファー履歴</div>
+    <div class="field"><label for="offer-history-filter">表示する記録</label><select id="offer-history-filter"><option value="offer">すべてのオファー</option><option value="pending">未確認のオファー</option><option value="visited">行った</option><option value="skipped">行ってない</option><option value="actions">拒否・受託などの操作</option></select></div>
+    <div id="offer-history"></div>
+    <button type="button" class="date-btn" id="offer-more" hidden>さらに表示</button>
     <div class="section-title" style="margin-top:16px">訪問ランキング</div><div id="store-ranking"></div>
     <div class="section-title" style="margin-top:20px">受取完了を記録</div>
     <div class="field"><label for="store-name">店舗名（支店名まで）</label><input id="store-name" maxlength="200" placeholder="例：吉野家 仙台河原町店"></div>
@@ -1536,7 +1540,7 @@ function protectNewerNativeRecord(localRecord,remoteRecord){
   return payload;
 }
 
-const ACCOUNT_COLLECTIONS=['delivery_records','monthly_expenses','monthly_goals','holidays','tax_settings','meal_records','store_visits','offer_events'];
+const ACCOUNT_COLLECTIONS=['delivery_records','monthly_expenses','monthly_goals','holidays','tax_settings','meal_records','store_visits','offer_events','offer_store_areas'];
 let accountBusy=false;
 
 function setAccountMessage(message,type=''){
@@ -2018,6 +2022,10 @@ let listenersAttached=false;
 function attachFirestoreListeners(){
   if(listenersAttached) return; // onAuthStateChangedが複数回発火しても二重登録しない
   listenersAttached=true;
+  onSnapshot(userCollection('offer_store_areas'),snap=>{
+    offerStoreAreas=new Map(snap.docs.map(d=>[d.id,String(d.data().area||'')]));
+    renderOfferStats();
+  },()=>showToast('店舗エリアを読み込めませんでした'));
   onSnapshot(userCollection('offer_events'),snap=>{
     offerEvents=snap.docs.map(d=>({...d.data(),id:d.id})).filter(v=>['offer','reject','accept_slide','accept_action','matching_request'].includes(v.kind)&&/^\d{4}-\d{2}-\d{2}$/.test(v.date));renderOfferStats();
   },()=>{document.getElementById('offer-stats').textContent='オファー記録の取得に失敗しました';});
@@ -3628,6 +3636,14 @@ const FOOD_DB = [
 
 let storeVisits=[];
 let offerEvents=[],offerSyncBusy=false;
+let offerStoreAreas=new Map(),offerHistoryLimit=20;
+function offerStoreKey(store){return 'store-'+cleanStoreName(store).replace(/%/g,'%25').replace(/\//g,'%2F');}
+function offerReview(v){return ['visited','skipped'].includes(v.review)?v.review:'pending';}
+function offerTime(v){
+  const time=Date.parse(v.createdAt);
+  if(!Number.isFinite(time))return '';
+  return new Date(time+9*3600000).toISOString().slice(11,16);
+}
 function offerKindName(kind){return ({offer:'オファー検出',reject:'拒否操作検出',accept_slide:'スライド受託操作検出',accept_action:'承諾操作検出',matching_request:'即時マッチング申込操作'})[kind]||kind;}
 function renderOfferStats(){
   const month=document.getElementById('store-month').value,platform=document.getElementById('store-platform-filter').value;
@@ -3635,7 +3651,41 @@ function renderOfferStats(){
   const counts=kind=>events.filter(v=>v.kind===kind).length;
   const slides=events.filter(v=>v.kind==='accept_slide'||v.kind==='accept_action');
   document.getElementById('offer-stats').innerHTML=`<p>オファー ${counts('offer')}回 / 拒否操作 ${counts('reject')}回 / 受託操作 ${slides.length}回</p><p style="font-size:12px">受託操作の内訳：シングル ${slides.filter(v=>Number(v.orderCount)===1).length}回 / 複数件 ${slides.filter(v=>Number(v.orderCount)>1).length}回</p>`;
-  document.getElementById('offer-history').innerHTML=events.slice().sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).slice(0,20).map(v=>`<div class="meal-item"><div>${escapeHTML(offerKindName(v.kind))}<div style="font-size:11px;color:var(--text2)">${escapeHTML(v.date)} ${escapeHTML(v.store||'店舗未取得')} / ${escapeHTML(String(v.reward??''))}円</div></div><button class="date-btn" data-offer-delete="${escapeHTML(v.id)}">削除</button></div>`).join('');
+  const offers=events.filter(v=>v.kind==='offer');
+  const areas=new Map(),hours=new Map();
+  for(const offer of offers){
+    const area=offerStoreAreas.get(offerStoreKey(offer.store))||'未分類';
+    const row=areas.get(area)||{count:0,visited:0};
+    row.count++;
+    if(offerReview(offer)==='visited')row.visited++;
+    areas.set(area,row);
+    const hour=offerTime(offer).slice(0,2);
+    const label=hour?hour+'時台':'時刻不明';
+    hours.set(label,(hours.get(label)||0)+1);
+  }
+  const ranked=map=>[...map].sort((a,b)=>(b[1].count??b[1])-(a[1].count??a[1])||a[0].localeCompare(b[0],'ja'));
+  const breakdown=document.getElementById('offer-breakdown');
+  const areaOpen=breakdown.querySelector('#offer-area-details')?.open;
+  const hourOpen=breakdown.querySelector('#offer-hour-details')?.open;
+  breakdown.innerHTML=
+    '<details id="offer-area-details"'+(areaOpen?' open':'')+'><summary>店舗エリア別のオファー</summary>'+
+    (ranked(areas).map(([name,row])=>`<div class="meal-item"><span>${escapeHTML(name)}</span><span>${row.count}件（行った ${row.visited}件）</span></div>`).join('')||'<p>記録なし</p>')+
+    '</details><details id="offer-hour-details"'+(hourOpen?' open':'')+'><summary>受信時間帯別のオファー（日本時間）</summary>'+
+    (ranked(hours).map(([name,count])=>`<div class="meal-item"><span>${escapeHTML(name)}</span><span>${count}件</span></div>`).join('')||'<p>記録なし</p>')+'</details>';
+  const mode=document.getElementById('offer-history-filter').value;
+  const history=(mode==='actions'?events.filter(v=>v.kind!=='offer'):offers.filter(v=>mode==='offer'||offerReview(v)===mode)).slice()
+    .sort((a,b)=>(Date.parse(b.createdAt)||0)-(Date.parse(a.createdAt)||0)||b.date.localeCompare(a.date));
+  const historyElement=document.getElementById('offer-history');
+  if(!historyElement.contains(document.activeElement)||document.activeElement?.name!=='area')historyElement.innerHTML=history.slice(0,offerHistoryLimit).map(v=>{
+    const id=escapeHTML(v.id);
+    const area=offerStoreAreas.get(offerStoreKey(v.store))||'';
+    return `<div class="meal-item" style="display:block"><strong>${escapeHTML(v.store||'店舗未取得')}</strong>
+      <div style="font-size:12px">${escapeHTML(v.date)} ${offerTime(v)} / ${escapeHTML(storePlatformName(v.platform))} / ${escapeHTML(String(v.reward??''))}円</div>
+      ${v.kind==='offer'?`<div class="field"><label for="review-${id}">訪問確認</label><select id="review-${id}" data-offer-review="${id}">${[['pending','未確認'],['visited','行った'],['skipped','行ってない']].map(([value,label])=>`<option value="${value}" ${offerReview(v)===value?'selected':''}>${label}</option>`).join('')}</select></div>
+      ${v.store?`<form data-offer-area="${id}"><div class="field"><label for="area-${id}">店舗エリア</label><input id="area-${id}" name="area" maxlength="60" value="${escapeHTML(area)}" placeholder="例：長町"></div><button class="date-btn" type="submit">エリアを保存</button></form>`:''}`:`<div>${escapeHTML(offerKindName(v.kind))}</div>`}
+      <button type="button" class="date-btn" data-offer-delete="${id}">削除</button></div>`;
+  }).join('')||'<p>該当する記録はありません</p>';
+  document.getElementById('offer-more').hidden=history.length<=offerHistoryLimit;
   const storeCounts=new Map();for(const v of slides){if(!v.store)continue;const name=cleanStoreName(v.store);storeCounts.set(name,(storeCounts.get(name)||0)+1);}
   document.getElementById('offer-stats').innerHTML+='<div class="section-title">承諾・受託操作時の店舗</div>'+[...storeCounts].sort((a,b)=>b[1]-a[1]).map(([name,count])=>`<div class="meal-item"><span>${escapeHTML(name)}</span><strong>${count}回</strong></div>`).join('');
   document.getElementById('offer-stats').innerHTML+=`<p>即時マッチング申込操作 ${counts('matching_request')}回（成立は未確認）</p>`;
@@ -3645,7 +3695,7 @@ async function syncOfferEvents(){
   offerSyncBusy=true;
   try{for(const v of JSON.parse(window.AndroidBridge.getPendingOfferEventsJson()||'[]')){
     if(v.owner!==currentUser.uid||!/^[-a-zA-Z0-9]{1,100}$/.test(v.id)||!/^\d{4}-\d{2}-\d{2}$/.test(v.date)||!['offer','reject','accept_slide','accept_action','matching_request'].includes(v.kind)||!['demae','uber','rocket'].includes(v.platform))continue;
-    await setDoc(userDoc('offer_events',v.id),{offerId:String(v.offerId||''),kind:v.kind,store:cleanStoreName(v.store),platform:v.platform,date:v.date,createdAt:String(v.createdAt||''),source:String(v.source||''),reward:nonNegativeNumber(v.reward),distanceKm:nonNegativeNumber(v.distanceKm),orderCount:Math.max(1,Math.floor(nonNegativeNumber(v.orderCount)))});
+    await setDoc(userDoc('offer_events',v.id),{offerId:String(v.offerId||''),kind:v.kind,store:cleanStoreName(v.store),platform:v.platform,date:v.date,createdAt:String(v.createdAt||''),source:String(v.source||''),reward:nonNegativeNumber(v.reward),distanceKm:nonNegativeNumber(v.distanceKm),orderCount:Math.max(1,Math.floor(nonNegativeNumber(v.orderCount)))},{merge:true});
     window.AndroidBridge.acknowledgeOfferEvent(v.id);
   }}catch(error){document.getElementById('offer-stats').textContent='オファー記録が未同期です。通信復帰後に再試行します';}finally{offerSyncBusy=false;}
 }
@@ -3678,7 +3728,34 @@ async function syncStoreVisits(){
 function setupStores(){
   document.getElementById('store-month').value=todayStr().slice(0,7);
   document.getElementById('store-date').value=todayStr();
-  for(const id of ['store-month','store-platform-filter'])document.getElementById(id).addEventListener('change',renderStores);
+  for(const id of ['store-month','store-platform-filter','offer-history-filter'])document.getElementById(id).addEventListener('change',()=>{offerHistoryLimit=20;renderStores();});
+  document.getElementById('offer-more').addEventListener('click',()=>{offerHistoryLimit+=20;renderOfferStats();});
+  const offerHistory=document.getElementById('offer-history');
+  offerHistory.addEventListener('change',async e=>{
+    const id=e.target.dataset.offerReview;
+    const offer=offerEvents.find(v=>v.id===id&&v.kind==='offer');
+    if(!offer||!currentUser||!['pending','visited','skipped'].includes(e.target.value))return;
+    const review=e.target.value;
+    const ref=userDoc('offer_events',id);
+    e.target.disabled=true;
+    try{await runTransaction(db,async tx=>{
+      if(!(await tx.get(ref)).exists())throw new Error('記録がありません');
+      tx.update(ref,{review});
+    });}
+    catch(error){showToast('訪問確認を保存できませんでした');renderOfferStats();}
+    finally{e.target.disabled=false;}
+  });
+  offerHistory.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const form=e.target;
+    const offer=offerEvents.find(v=>v.id===form.dataset.offerArea&&v.kind==='offer');
+    if(!offer?.store||!currentUser)return;
+    const button=form.querySelector('button');
+    button.disabled=true;
+    try{await setDoc(userDoc('offer_store_areas',offerStoreKey(offer.store)),{area:String(new FormData(form).get('area')||'').trim().slice(0,60)});showToast('店舗エリアを保存しました');}
+    catch(error){showToast('店舗エリアを保存できませんでした');}
+    finally{button.disabled=false;}
+  });
   const nativeButton=document.getElementById('btn-store-native');nativeButton.hidden=!NATIVE_ANDROID;
   nativeButton.addEventListener('click',()=>window.AndroidBridge.openOfferAssistant());
   document.getElementById('btn-store-add').addEventListener('click',async e=>{
